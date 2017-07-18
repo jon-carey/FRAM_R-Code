@@ -12,6 +12,10 @@
 #    BK flags that are in the database.
 #
 #JC; DEC 2016
+
+# 1. Added functionality to deal with RunID tables w/ and w/out RunYear field
+#
+#JC; JUL 2017
 ################################################################################
 
 # Clear workspace
@@ -27,16 +31,16 @@ library(RODBC)
 
 # Set paths
 Dir <- "C:\\data\\FRAM\\Base Period\\Validation\\BKloadTest\\"
-paths = list(paste(Dir, "Valid2016_FRAM_StockData_12.30.16.xlsm", sep=""),
-             paste(Dir, "2016 Validation_NewBP_12.30.16.mdb", sep=""))
+paths = list(paste(Dir, "Valid2016_FRAM_StockData_7.18.17.xlsm", sep=""),
+             paste(Dir, "2016 Validation_OldBP_Round_5_Prep.mdb", sep=""))
 
 infile = paths[[1]]
 Outfile = paths[[2]]
 
-StartYr = 1992
+StartYr = 2010
 EndYr = 2014
 
-BP = "New"
+BP = "Old"
 
 # Retain existing flags? 1=Yes, 0=No
 KeepFlags = 1
@@ -106,9 +110,17 @@ BKflags <- BackwardsFRAM[ ,c(1,2,6)]
 # Append BK data to BackwardsFRAM table
 i=StartYr
 for (i in StartYr:EndYr) {
-    runID <- RunID[RunID$Year == i, 2]
-    year <- RunID[RunID$Year == i, 11]
-    bp <- RunID[RunID$Year == i, 12]
+    if(dim(RunID)[2] == 12) { # for RunID table that does not contain RunYear field
+        runID <- RunID[RunID$Year == i, 2]
+        year <- RunID[RunID$Year == i, 11]
+        bp <- RunID[RunID$Year == i, 12]
+    }
+    if(dim(RunID)[2] == 13) { # for RunID table that does contain RunYear field
+        runID <- RunID[RunID$Year == i, 2]
+        year <- RunID[RunID$Year == i, 12]
+        bp <- RunID[RunID$Year == i, 13]
+    }
+    
     
     if(bp == "Old") {
         BKFRAM <- subset(BKData, YEAR == year & StockID <114)
