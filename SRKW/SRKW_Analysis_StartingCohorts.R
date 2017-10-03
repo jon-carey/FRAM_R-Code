@@ -31,16 +31,25 @@ library(ggplot2)
 # Round data? Prob only necessary for validating calcs with existing spreadsheets
 RoundFlag = 0 # 0=No, 1=Yes
 
-# Set the paths 
-paths = list("C:\\data\\GitHub\\FRAM_R-Code\\SRKW\\SRKW_Inputs_Old.xlsx",
-             "C:\\data\\FRAM\\Base Period\\Validation\\Round 5\\Working\\Valid2016_OldBP_8.16.2017_USE_ME.mdb",
+# Process abundances before natural mortality or after pre-terminal fisheries?
+AbundType = 1 # 0 = Before NatMort, 1 = After PT Fish Mort
+
+# Set the paths:
+#   1 = Excel input file
+#   2 = FRAM db for 1st set of model runs (links to Col B in 'R_In_RunID' tab of above file)
+#   3 = FRAM db for 2nd set of model runs (links to Col C in 'R_In_RunID' tab of above file)
+#   4 = Output directory
+paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_New.xlsx",
+             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP_Round5_Iter3.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP_Round5_Iter3 - ZeroUS.mdb",
              "C:\\data\\FRAM\\SRKW\\R_Out\\")
 
 # Set the input file path for the database containing FRAM runs
-DBpath = paths[[2]]
+DBpath1 = paths[[2]]
+DBpath2 = paths[[3]]
 
 # Set output directory
-outfile = paths[[3]]
+outfile = paths[[4]]
 
 #Import static input data
 kCal_Age <- read_excel(paths[[1]], "R_In_kCal-Age")
@@ -58,15 +67,42 @@ RunIDs <- read_excel(paths[[1]], "R_In_RunID")
 minYr <- min(RunIDs$Year)
 maxYr <- max(RunIDs$Year)
 
-# Pull Cohort & Mortality tables from FRAM database
-con = odbcConnectAccess(DBpath)
-Cohort78 = sqlQuery(con, as.is = TRUE, 
+# Pull Cohort & Mortality tables from FRAM databases
+con = odbcConnectAccess(DBpath1)
+Cohort78_1 = sqlQuery(con, as.is = TRUE, 
                     paste(sep = '',
                           "SELECT * FROM Cohort"))
-Mort78 = sqlQuery(con, as.is = TRUE, 
+Mort78_1 = sqlQuery(con, as.is = TRUE, 
                   paste(sep = '',
                         "SELECT * FROM Mortality"))
 close(con)
+
+con = odbcConnectAccess(DBpath2)
+Cohort78_2 = sqlQuery(con, as.is = TRUE, 
+                      paste(sep = '',
+                            "SELECT * FROM Cohort"))
+Mort78_2 = sqlQuery(con, as.is = TRUE, 
+                    paste(sep = '',
+                          "SELECT * FROM Mortality"))
+close(con)
+
+# Trim to necessary RunIS and make sure they are not the same for each set of runs
+RunName1 <- colnames(RunIDs)[2]
+RunName2 <- colnames(RunIDs)[3]
+
+Cohort78_1 <- subset(Cohort78_1, RunID %in% RunIDs[,2])
+Cohort78_1$RunID <- paste(RunName1, "_", Cohort78_1$RunID, sep = "")
+Cohort78_2 <- subset(Cohort78_2, RunID %in% RunIDs[,3])
+Cohort78_2$RunID <- paste(RunName2, "_", Cohort78_2$RunID, sep = "")
+Mort78_1 <- subset(Mort78_1, RunID %in% RunIDs[,2])
+Mort78_1$RunID <- paste(RunName1, "_", Mort78_1$RunID, sep = "")
+Mort78_2 <- subset(Mort78_2, RunID %in% RunIDs[,3])
+Mort78_2$RunID <- paste(RunName2, "_", Mort78_2$RunID, sep = "")
+
+# Combine cohort and mortality tables for each set of runs
+Cohort78 <- rbind(Cohort78_1, Cohort78_2)
+Mort78 <- rbind(Mort78_1, Mort78_2)
+rm(Cohort78_1, Cohort78_2, Mort78_1, Mort78_2)
 
 # Create empty data frame summary files
 AvailablePrey <- as.data.frame(array(NA, c(0,6)))
@@ -93,10 +129,11 @@ colnames(PS.TermOnly_Removals) <- c("TimeStep", "Age", "TotMort", "kCalTotMort")
 # Round cohort sizes to nearest integer (for testing only, as PopStat is rounded)
 if(RoundFlag == 1) {
     Cohort78$MidCohort <- round(Cohort78$MidCohort,0)
+    Cohort78$StartCohort <- round(Cohort78$StartCohort,0)
 }
 
 # Filter data to Time Steps 1-3 and remove unneccessary fields
-Cohort78 <- Cohort78[Cohort78$TimeStep < 4, c(2:5,10)]
+Cohort78 <- Cohort78[Cohort78$TimeStep < 4, c(2:5,8,10)]
 Mort78 <- Mort78[Mort78$TimeStep < 4, c(2:10,12:15)]
 
 # Convert from 78 stock format to 39 stock format
@@ -109,7 +146,13 @@ ifelse(RoundFlag == 1, Mort78$TotMort <- round(rowSums(Mort78[ ,c(6:13)]),0),
 Mort78 <- Mort78[ ,c(1:5,15,14)]
 
 # Combine Marked and Unmarked components of each stock
-Cohort <- summaryBy(MidCohort~RunID+Stock+Age+TimeStep, data = Cohort78, FUN = sum)
+if(AbundType == 0) {
+    Cohort <- summaryBy(StartCohort~RunID+Stock+Age+TimeStep, data = Cohort78, FUN = sum)
+}
+if(AbundType == 1) {
+    Cohort <- summaryBy(MidCohort~RunID+Stock+Age+TimeStep, data = Cohort78, FUN = sum)
+}
+colnames(Cohort)[5] <- "Cohort"
 Mort <- summaryBy(TotMort~RunID+Stock+Age+FisheryID+TimeStep, data = Mort78, FUN = sum)
 
 #######################################################
@@ -122,15 +165,10 @@ for(i in minYr:maxYr) {
     j=2
     for(j in 2:3) {
         # Identify RunID
-        runID <- RunIDs[RunIDs$Year == i, j]
+        runID <- paste(colnames(RunIDs)[j], "_", RunIDs[RunIDs$Year == i, j], sep = "")
         
         # Identify Run Type
-        if(j == 2) {
-            runType <- "Likely"
-        }
-        if(j == 3) {
-            runType <- "No Action"
-        }
+        runType <- colnames(RunIDs)[j]
         
         # Filter data to correct RunID
         cohort <- Cohort[Cohort$RunID == runID, ]
@@ -144,8 +182,8 @@ for(i in minYr:maxYr) {
         cohort <- merge(cohort, kCal_Age)
         
         # Calculate abundance in inland and coastal waters
-        cohort$InlandAbundance <- cohort$MidCohort.sum * cohort$ppnInland
-        cohort$CoastalAbundance <- cohort$MidCohort.sum * cohort$ppnCoastal
+        cohort$InlandAbundance <- cohort$Cohort * cohort$ppnInland
+        cohort$CoastalAbundance <- cohort$Cohort * cohort$ppnCoastal
         
         # Calculate kCal in inland and coastal waters
         cohort$InlandkCal <- cohort$InlandAbundance * cohort$kCal_Selectivity
@@ -191,7 +229,7 @@ for(i in minYr:maxYr) {
         ########################################################################
         # Calculate Chinook and kCals removed by PS fisheries in 'Likely' runs #
         ########################################################################
-        if(runType == "Likely") {
+        if(j==2) {
             # Merge with kCal_Age and FishFlag
             mort <- merge(mort, FishFlag)
             mort <- merge(mort, kCal_Age)
@@ -263,6 +301,14 @@ for(i in minYr:maxYr) {
 ###########################
 # GENERATE SUMMARY TABLES #
 ###########################
+# Set Column Names
+ColumnNames <- c(paste(RunName1, "_T1", sep = ""),
+                 paste(RunName1, "_T2", sep = ""),
+                 paste(RunName1, "_T3", sep = ""),
+                 paste(RunName2, "_T1", sep = ""),
+                 paste(RunName2, "_T2", sep = ""),
+                 paste(RunName2, "_T3", sep = ""))
+
 # Summarize age 3-5 coastal abundances
 SummaryAge3to5Chin_Coastal <- summaryBy(Coastal_Abundance~Year+Run+TimeStep,
                                         data = AvailablePrey[AvailablePrey$Age > 2, ],
@@ -271,8 +317,7 @@ SummaryAge3to5Chin_Coastal <- reshape(SummaryAge3to5Chin_Coastal, idvar = c("Yea
                                       timevar = "TimeStep", direction = "wide")
 SummaryAge3to5Chin_Coastal <- reshape(SummaryAge3to5Chin_Coastal, idvar = "Year", 
                                       timevar = "Run", direction = "wide")
-colnames(SummaryAge3to5Chin_Coastal)[2:7] <- c("Likely_T1", "Likely_T2", "Likely_T3", 
-                                               "NoAction_T1", "NoAction_T2", "NoAction_T3")
+colnames(SummaryAge3to5Chin_Coastal)[2:7] <- ColumnNames
 
 # Summarize age 3-5 coastal kCals
 SummaryKilos_Coastal <- summaryBy(Coastal_kCal~Year+Run+TimeStep, 
@@ -281,8 +326,7 @@ SummaryKilos_Coastal <- reshape(SummaryKilos_Coastal, idvar = c("Year","Run"),
                                 timevar = "TimeStep", direction = "wide")
 SummaryKilos_Coastal <- reshape(SummaryKilos_Coastal, idvar = "Year", timevar = "Run",
                                 direction = "wide")
-colnames(SummaryKilos_Coastal)[2:7] <- c("Likely_T1", "Likely_T2", "Likely_T3", 
-                                 "NoAction_T1", "NoAction_T2", "NoAction_T3")
+colnames(SummaryKilos_Coastal)[2:7] <- ColumnNames
 
 
 # Summarize age 3-5 inland abundances
@@ -292,8 +336,7 @@ SummaryAge3to5Chin <- reshape(SummaryAge3to5Chin, idvar = c("Year","Run"),
                               timevar = "TimeStep", direction = "wide")
 SummaryAge3to5Chin <- reshape(SummaryAge3to5Chin, idvar = "Year", timevar = "Run", 
                               direction = "wide")
-colnames(SummaryAge3to5Chin)[2:7] <- c("Likely_T1", "Likely_T2", "Likely_T3", 
-                                       "NoAction_T1", "NoAction_T2", "NoAction_T3")
+colnames(SummaryAge3to5Chin)[2:7] <- ColumnNames
 
 # Summarize age 3-5 inland kCals
 SummaryKilos <- summaryBy(Inland_kCal~Year+Run+TimeStep, 
@@ -302,16 +345,17 @@ SummaryKilos <- reshape(SummaryKilos, idvar = c("Year","Run"), timevar = "TimeSt
                         direction = "wide")
 SummaryKilos <- reshape(SummaryKilos, idvar = "Year", timevar = "Run", 
                         direction = "wide")
-colnames(SummaryKilos)[2:7] <- c("Likely_T1", "Likely_T2", "Likely_T3", 
-                                 "NoAction_T1", "NoAction_T2", "NoAction_T3")
+colnames(SummaryKilos)[2:7] <- ColumnNames
 
 # Calculate likely after terminal in time step 3 and add to above 2 Puget Sound tables
 PS_Term_Mort_T3 <- summaryBy(TotMort+kCalTotMort~Year+Run+TimeStep,
                              data = PS.TermOnly_Removals[PS.TermOnly_Removals$Age > 2, ],
                              FUN = sum)
-SummaryAge3to5Chin$Likely_AfterTerm_T3 <- SummaryAge3to5Chin$Likely_T3 - PS_Term_Mort_T3$TotMort.sum
+SummaryAge3to5Chin$Likely_AfterTerm_T3 <- SummaryAge3to5Chin[ ,4] - PS_Term_Mort_T3$TotMort.sum
+colnames(SummaryAge3to5Chin)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
 SummaryAge3to5Chin <- SummaryAge3to5Chin[ ,c(1:4,8,5:7)]
-SummaryKilos$Likely_AfterTerm_T3 <- SummaryKilos$Likely_T3 - PS_Term_Mort_T3$kCalTotMort.sum
+SummaryKilos$Likely_AfterTerm_T3 <- SummaryKilos[ ,4] - PS_Term_Mort_T3$kCalTotMort.sum
+colnames(SummaryKilos)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
 SummaryKilos <- SummaryKilos[ ,c(1:4,8,5:7)]
 
 # Summarize Inland Needs table
@@ -320,27 +364,37 @@ SummaryNeeds_Inland <- reshape(SummaryNeeds_Inland, idvar = c("TimeStep", "Year"
                                timevar = "Run", direction = "wide")
 SummaryNeeds_Inland <- SummaryNeeds_Inland[order(SummaryNeeds_Inland$TimeStep), 
                                            c(1:3,9:12,4:7)]
-colnames(SummaryNeeds_Inland)[3:11] <- c("Region", "NoAction_MinDPER_Avg", "NoAction_MaxDPER_Avg", 
-                                         "NoAction_MinDPER_Max", "NoAction_MaxDPER_Max",
-                                         "Likely_MinDPER_Avg", "Likely_MaxDPER_Avg", 
-                                         "Likely_MinDPER_Max", "Likely_MaxDPER_Max")
+colnames(SummaryNeeds_Inland)[3:11] <- c("Region", 
+                                         paste(RunName2, "_MinDPER_Avg", sep = ""),
+                                         paste(RunName2, "_MaxDPER_Avg", sep = ""),
+                                         paste(RunName2, "_MinDPER_Max", sep = ""),
+                                         paste(RunName2, "_MaxDPER_Max", sep = ""),
+                                         paste(RunName1, "_MinDPER_Avg", sep = ""),
+                                         paste(RunName1, "_MaxDPER_Avg", sep = ""),
+                                         paste(RunName1, "_MinDPER_Max", sep = ""),
+                                         paste(RunName1, "_MaxDPER_Max", sep = ""))
 
-# Summarize Inland Needs table
+# Summarize Coastal Needs table
 SummaryNeeds_Coastal <- kCal_to_Need[kCal_to_Need$Region == "Coastal" ,c(3:4,1:2,5:8)]
 SummaryNeeds_Coastal <- reshape(SummaryNeeds_Coastal, idvar = c("TimeStep", "Year"), 
                                timevar = "Run", direction = "wide")
 SummaryNeeds_Coastal <- SummaryNeeds_Coastal[order(SummaryNeeds_Coastal$TimeStep), 
                                            c(1:3,9:12,4:7)]
-colnames(SummaryNeeds_Coastal)[3:11] <- c("Region", "NoAction_MinDPER_Avg", "NoAction_MaxDPER_Avg", 
-                                         "NoAction_MinDPER_Max", "NoAction_MaxDPER_Max",
-                                         "Likely_MinDPER_Avg", "Likely_MaxDPER_Avg", 
-                                         "Likely_MinDPER_Max", "Likely_MaxDPER_Max")
+colnames(SummaryNeeds_Coastal)[3:11] <- c("Region", 
+                                          paste(RunName2, "_MinDPER_Avg", sep = ""),
+                                          paste(RunName2, "_MaxDPER_Avg", sep = ""),
+                                          paste(RunName2, "_MinDPER_Max", sep = ""),
+                                          paste(RunName2, "_MaxDPER_Max", sep = ""),
+                                          paste(RunName1, "_MinDPER_Avg", sep = ""),
+                                          paste(RunName1, "_MaxDPER_Avg", sep = ""),
+                                          paste(RunName1, "_MinDPER_Max", sep = ""),
+                                          paste(RunName1, "_MaxDPER_Max", sep = ""))
 
 # Summarize FisheryRedux table
 SummaryFisheryRedux <- as.data.frame(SummaryKilos[ ,1])
-SummaryFisheryRedux$Oct_Apr <- (SummaryKilos$Likely_T1 - SummaryKilos$NoAction_T1) / SummaryKilos$NoAction_T1
-SummaryFisheryRedux$May_Jun <- (SummaryKilos$Likely_T2 - SummaryKilos$NoAction_T2) / SummaryKilos$NoAction_T2
-SummaryFisheryRedux$Jul_Sep <- (SummaryKilos$Likely_AfterTerm_T3 - SummaryKilos$NoAction_T3) / SummaryKilos$NoAction_T3
+SummaryFisheryRedux$Oct_Apr <- (SummaryKilos[ ,2] - SummaryKilos[ ,6]) / SummaryKilos[ ,6]
+SummaryFisheryRedux$May_Jun <- (SummaryKilos[ ,3] - SummaryKilos[ ,7]) / SummaryKilos[ ,7]
+SummaryFisheryRedux$Jul_Sep <- (SummaryKilos[ ,5] - SummaryKilos[ ,8]) / SummaryKilos[ ,8]
 colnames(SummaryFisheryRedux)[1] <- c("Year")
 
 # Export Summary Tables
@@ -367,7 +421,7 @@ figdat[figdat$TimeStep == 3, 3] <- "Jul-Sep"
 figdat$TimeStep <- factor(figdat$TimeStep, levels = c("Oct-Apr",
                                                       "May-Jun",
                                                       "Jul-Sep"))
-figdat$Run <- factor(figdat$Run, levels = c("Old BP", "New BP"))
+figdat$Run <- factor(figdat$Run, levels = c(RunName2, RunName1))
 
 # Create plot
 p <- ggplot(data = figdat, aes(Year, Inland_Abundance.sum/1000, fill=Run))
@@ -408,7 +462,7 @@ figdat[figdat$TimeStep == 3, 3] <- "Jul-Sep"
 figdat$TimeStep <- factor(figdat$TimeStep, levels = c("Oct-Apr",
                                                       "May-Jun",
                                                       "Jul-Sep"))
-figdat$Run <- factor(figdat$Run, levels = c("Old BP", "New BP"))
+figdat$Run <- factor(figdat$Run, levels = c(RunName2, RunName1))
 
 # Create plot
 p <- ggplot(data = figdat, aes(Year, Coastal_Abundance.sum/1000, fill=Run))
@@ -449,7 +503,7 @@ figdat[figdat$TimeStep == 3, 3] <- "Jul-Sep"
 figdat$TimeStep <- factor(figdat$TimeStep, levels = c("Oct-Apr",
                                                       "May-Jun",
                                                       "Jul-Sep"))
-figdat$Run <- factor(figdat$Run, levels = c("Old BP", "New BP"))
+figdat$Run <- factor(figdat$Run, levels = c(RunName2, RunName1))
 
 # Create plot
 p <- ggplot(data = figdat, aes(Year, Inland_kCal.sum/1000000, fill=Run))
@@ -490,7 +544,7 @@ figdat[figdat$TimeStep == 3, 3] <- "Jul-Sep"
 figdat$TimeStep <- factor(figdat$TimeStep, levels = c("Oct-Apr",
                                                       "May-Jun",
                                                       "Jul-Sep"))
-figdat$Run <- factor(figdat$Run, levels = c("Old BP", "New BP"))
+figdat$Run <- factor(figdat$Run, levels = c(RunName2, RunName1))
 
 # Create plot
 p <- ggplot(data = figdat, aes(Year, Coastal_kCal.sum/1000000, fill=Run))
