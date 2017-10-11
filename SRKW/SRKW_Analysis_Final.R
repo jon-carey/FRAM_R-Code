@@ -1,18 +1,24 @@
 #######################################################################################
-# The purpose of this program is to process a specified set of FRAM model runs 
-# resulting in estimates of Age 3-5 Chinook abundances and available Kilocalories
-# inside the Salish Sea, to inform Southern Resident Killer Whale analysis for  
-# a renewed PS Chinook RMP and Biological Opinion.
+# The purpose of this program is to process a specified set of paired FRAM model runs
+# (one with fisheries of interest "turned on" and one with them "turned off")
+# resulting in estimates of available Age 3-5 Chinook abundances and kilocalories
+# in inland (Salish Sea) and coastal waters, to inform Southern Resident Killer Whale 
+# analysis for a renewed PS Chinook RMP and Biological Opinion.
 #
 # Note: before running, ensure that the paths below are set to the correct directories
 #   Path 1; SRKW input excel file - this file contains numerous tabs with static input
 #           data necessary for the analysis. Double check that the RunIDs in the
 #           'R_In_RunIDs' tab reference the appropriate runs in the databse below
-#   Path 2; Access databse that contains the FRAM model runs referenced in the 
-#           'R_In_RunIDs' tab in the above input file
-#   Path 3; Output directory for saving tables and figures
+#   Path 2; Access databse that contains the FRAM model runs referenced in column B of
+#            the 'R_In_RunIDs' tab in the above input file (fisheries turned on)
+#   Path 3; Access databse that contains the FRAM model runs referenced in column C of
+#            the 'R_In_RunIDs' tab in the above input file (fisheries turned off)
+#   Path 4; Output directory for saving tables and figures
+
+# Warning: due the some of the packages used, this program requires that the 32-bit 
+# version of R software is used.
 #
-# JC; Aug 2017
+# JC; Oct 2017
 #######################################################################################
 
 
@@ -31,8 +37,8 @@ library(ggplot2)
 # Round data? Prob only necessary for validating calcs with existing spreadsheets
 RoundFlag = 0 # 0=No, 1=Yes
 
-# Process abundances before natural mortality or after pre-terminal fisheries?
-AbundType = 0 # 0 = Before NatMort, 1 = After PT Fish Mort
+# Include natural mortality in abundances?
+AbundType = 0 # 0=Yes, 1=No
 
 # Set the paths:
 #   1 = Excel input file
@@ -40,8 +46,8 @@ AbundType = 0 # 0 = Before NatMort, 1 = After PT Fish Mort
 #   3 = FRAM db for 2nd set of model runs (links to Col C in 'R_In_RunID' tab of above file)
 #   4 = Output directory
 paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_New.xlsx",
-             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP_Round5_Iter3.mdb",
-             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP_Round5_Iter3 - ZeroUS.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - ZeroPS.mdb",
              "C:\\data\\FRAM\\SRKW\\R_Out\\")
 
 # Set the input file path for the database containing FRAM runs
@@ -76,12 +82,6 @@ kCal_to_Need <- as.data.frame(array(NA, c(0,8)))
 colnames(kCal_to_Need) <- c("Year", "Run", "Region", "TimeStep", "Min_DPER_Avg", 
                             "Max_DPER_Avg", "Min_DPER_Max", "Min_DPER_Max")
 
-PS_Removals <- as.data.frame(array(NA, c(0,6)))
-colnames(PS_Removals) <- c("TimeStep", "Age", "TotMort", "kCalTotMort")
-
-PS.TermExcl_Removals <- as.data.frame(array(NA, c(0,6)))
-colnames(PS.TermExcl_Removals) <- c("TimeStep", "Age", "TotMort", "kCalTotMort")
-
 PS.TermOnly_Removals <- as.data.frame(array(NA, c(0,6)))
 colnames(PS.TermOnly_Removals) <- c("TimeStep", "Age", "TotMort", "kCalTotMort")
 
@@ -108,13 +108,13 @@ close(con)
 RunName1 <- colnames(RunIDs)[2]
 RunName2 <- colnames(RunIDs)[3]
 
-Cohort78_1 <- subset(Cohort78_1, RunID %in% RunIDs[,2])
+Cohort78_1 <- subset(Cohort78_1, RunID %in% unname(unlist(RunIDs[,2])))
 Cohort78_1$RunID <- paste(RunName1, "_", Cohort78_1$RunID, sep = "")
-Cohort78_2 <- subset(Cohort78_2, RunID %in% RunIDs[,3])
+Cohort78_2 <- subset(Cohort78_2, RunID %in% unname(unlist(RunIDs[,3])))
 Cohort78_2$RunID <- paste(RunName2, "_", Cohort78_2$RunID, sep = "")
-Mort78_1 <- subset(Mort78_1, RunID %in% RunIDs[,2])
+Mort78_1 <- subset(Mort78_1, RunID %in% unname(unlist(RunIDs[,2])))
 Mort78_1$RunID <- paste(RunName1, "_", Mort78_1$RunID, sep = "")
-Mort78_2 <- subset(Mort78_2, RunID %in% RunIDs[,3])
+Mort78_2 <- subset(Mort78_2, RunID %in% unname(unlist(RunIDs[,3])))
 Mort78_2$RunID <- paste(RunName2, "_", Mort78_2$RunID, sep = "")
 
 # Combine cohort and mortality tables for each set of runs
@@ -175,7 +175,46 @@ for(i in minYr:maxYr) {
         # Filter data to correct RunID
         cohort <- Cohort[Cohort$RunID == runID, ]
         mort <- Mort[Mort$RunID == runID, ]
-        
+
+        ########################################################################
+        # Calculate Chinook and kCals removed by PS fisheries in 'Likely' runs #
+        ########################################################################
+        if(j==2) {
+            # Merge with kCal_Age and FishFlag
+            mort <- merge(mort, FishFlag)
+            mort <- merge(mort, kCal_Age)
+            
+            # Discount or exclude morts in PS terminal fisheries where SRKWs have not 
+            # been or have rarely been observed
+            mort$TotMort.TermExcl <- mort$TotMort.sum * mort$Weight
+            
+            # Calculate kCal of mortalities
+            mort$kCalTotMort <- mort$TotMort.sum * mort$kCal_Selectivity
+            mort$kCalTotMort.TermExcl <- mort$TotMort.TermExcl * mort$kCal_Selectivity
+            
+            # Summarize mortalities by age-timestep
+            PSMort_TermOnly_AT <- summaryBy(TotMort.TermExcl+kCalTotMort.TermExcl~TimeStep+Age,
+                                            data = mort[mort$Flag == 2,], FUN = sum)
+            
+            # A little formatting (column names, get rid of sci. notation, rounding, etc...)
+            colnames(PSMort_TermOnly_AT)[c(3:4)] <- c("TotMort","kCalTotMort")
+            PSMort_TermOnly_AT$kCalTotMort <- as.numeric(format(PSMort_TermOnly_AT$kCalTotMort,
+                                                                scientific = FALSE))
+            PSMort_TermOnly_AT$TotMort <- round(PSMort_TermOnly_AT$TotMort, 0)
+            PSMort_TermOnly_AT$kCalTotMort <- round(PSMort_TermOnly_AT$kCalTotMort, 0)
+            
+            # Add 'Year' and 'Run' fields
+            PSMort_TermOnly_AT$Year <- c(rep(i, dim(PSMort_TermOnly_AT)[1]))
+            PSMort_TermOnly_AT$Run <- c(rep(runType, dim(PSMort_TermOnly_AT)[1]))
+            
+            # Reorder and remove unnecessary columns
+            PSMort_TermOnly_AT <- PSMort_TermOnly_AT[PSMort_TermOnly_AT$TimeStep == 3,
+                                                     c(5,6,1:4)]
+            
+            # Append to main output files
+            PS.TermOnly_Removals <- rbind(PS.TermOnly_Removals, PSMort_TermOnly_AT)
+        }
+                
         ##########################################################
         # Calculate abundance and kCal of available Chinook prey #
         ##########################################################
@@ -205,15 +244,23 @@ for(i in minYr:maxYr) {
         cohortSummary$Run <- c(rep(runType, dim(cohortSummary)[1]))
         cohortSummary <- cohortSummary[ , c(7,8,1:6)]
         
-        # Sum by time step (over ages 3-5)
+        ###############################################################
+        # Calculate ratios of available kCal to needs (over ages 3-5) #
+        ###############################################################
+        # Summarize inland and coastal kCals by time step
         kCal_TS <- summaryBy(Inland_kCal+Coastal_kCal~TimeStep, 
                              data = cohortSummary[cohortSummary$Age > 2, ], FUN = sum)
         colnames(kCal_TS)[2:3] <- c("Inland","Coastal")
         
+        # Remove PS terminal fishery kCals
+        PS_T3_Term_kCal <- sum(PSMort_TermOnly_AT[PSMort_TermOnly_AT$Age != 2, 6])
+        kCal_TS[3,2] <- kCal_TS[3,2] - PS_T3_Term_kCal
+        
+        # Reshape into long format
         kCal_TS <- reshape(kCal_TS, direction = "long", varying = list(names(kCal_TS)[2:3]),
                            v.names = "kCal", idvar = "TimeStep", timevar = "Region",
                            times = c("Inland", "Coastal"))
-        
+        # Merge available kCal with needs and calculate ratios
         kCal_TS <- merge(kCal_TS, Needs)
         kCal_TS$Min_DPER_Avg <- round(kCal_TS$kCal / kCal_TS$MinPER_Avg, 2)
         kCal_TS$Max_DPER_Avg <- round(kCal_TS$kCal / kCal_TS$MaxPER_Avg, 2)
@@ -227,76 +274,6 @@ for(i in minYr:maxYr) {
         # Append to main summary files
         AvailablePrey <- rbind(AvailablePrey, cohortSummary)
         kCal_to_Need <- rbind(kCal_to_Need, kCal_TS)
-        
-        ########################################################################
-        # Calculate Chinook and kCals removed by PS fisheries in 'Likely' runs #
-        ########################################################################
-        if(j==2) {
-            # Merge with kCal_Age and FishFlag
-            mort <- merge(mort, FishFlag)
-            mort <- merge(mort, kCal_Age)
-            
-            # Discount or exclude morts in PS terminal fisheries where SRKWs have not 
-            # been or have rarely been observed
-            mort$TotMort.TermExcl <- mort$TotMort.sum * mort$Weight
-            
-            # Calculate kCal of mortalities
-            mort$kCalTotMort <- mort$TotMort.sum * mort$kCal_Selectivity
-            mort$kCalTotMort.TermExcl <- mort$TotMort.TermExcl * mort$kCal_Selectivity
-            
-            # # Summarize mortalities by stock-age-timestep
-            # PSMort_SAT <- summaryBy(TotMort.sum+kCalTotMort~Stock+Age+TimeStep, 
-            #                         data = mort[mort$Flag >= 1,], FUN = sum)
-            # PSMort_TermExcl_SAT <- summaryBy(TotMort.TermExcl+kCalTotMort.TermExcl~Stock+Age+TimeStep,
-            #                                  data = mort[mort$Flag >= 1,], FUN = sum)
-            # PSMort_TermOnly_SAT <- summaryBy(TotMort.TermExcl+kCalTotMort.TermExcl~Stock+Age+TimeStep,
-            #                                  data = mort[mort$Flag == 2,], FUN = sum)
-            
-            # Summarize mortalities by age-timestep
-            # PSMort_AT <- summaryBy(TotMort.sum+kCalTotMort~TimeStep+Age, 
-            #                        data = mort[mort$Flag >= 1,], FUN = sum)
-            # PSMort_TermExcl_AT <- summaryBy(TotMort.TermExcl+kCalTotMort.TermExcl~TimeStep+Age,
-            #                                 data = mort[mort$Flag >= 1,], FUN = sum)
-            PSMort_TermOnly_AT <- summaryBy(TotMort.TermExcl+kCalTotMort.TermExcl~TimeStep+Age,
-                                            data = mort[mort$Flag == 2,], FUN = sum)
-            
-            # A little formatting (column names, get rid of sci. notation, rounding, etc...)
-            # colnames(PSMort_AT)[c(3:4)] <- c("TotMort", "kCalTotMort")
-            # colnames(PSMort_TermExcl_AT)[c(3:4)] <- c("TotMort","kCalTotMort")
-            colnames(PSMort_TermOnly_AT)[c(3:4)] <- c("TotMort","kCalTotMort")
-            # PSMort_AT$kCalTotMort <- as.numeric(format(PSMort_AT$kCalTotMort, 
-            #                                            scientific = FALSE))
-            # PSMort_TermExcl_AT$kCalTotMort <- as.numeric(format(PSMort_TermExcl_AT$kCalTotMort,
-            #                                                     scientific = FALSE))
-            PSMort_TermOnly_AT$kCalTotMort <- as.numeric(format(PSMort_TermOnly_AT$kCalTotMort,
-                                                                scientific = FALSE))
-            # PSMort_AT$TotMort <- round(PSMort_AT$TotMort, 0)
-            # PSMort_TermExcl_AT$TotMort <- round(PSMort_TermExcl_AT$TotMort, 0)
-            PSMort_TermOnly_AT$TotMort <- round(PSMort_TermOnly_AT$TotMort, 0)
-            # PSMort_AT$kCalTotMort <- round(PSMort_AT$kCalTotMort, 0)
-            # PSMort_TermExcl_AT$kCalTotMort <- round(PSMort_TermExcl_AT$kCalTotMort, 0)
-            PSMort_TermOnly_AT$kCalTotMort <- round(PSMort_TermOnly_AT$kCalTotMort, 0)
-            
-            # Add 'Year' and 'Run' fields
-            # PSMort_AT$Year <- c(rep(i, dim(PSMort_AT)[1]))
-            # PSMort_TermExcl_AT$Year <- c(rep(i, dim(PSMort_TermExcl_AT)[1]))
-            PSMort_TermOnly_AT$Year <- c(rep(i, dim(PSMort_TermOnly_AT)[1]))
-            # PSMort_AT$Run <- c(rep(runType, dim(PSMort_AT)[1]))
-            # PSMort_TermExcl_AT$Run <- c(rep(runType, dim(PSMort_TermExcl_AT)[1]))
-            PSMort_TermOnly_AT$Run <- c(rep(runType, dim(PSMort_TermOnly_AT)[1]))
-            
-            # Reorder and remove unnecessary columns
-            # PSMort_AT <- PSMort_AT[order(PSMort_AT$TimeStep,PSMort_AT$Age), c(5,6,1:4)]
-            # PSMort_TermExcl_AT <- PSMort_TermExcl_AT[order(PSMort_TermExcl_AT$TimeStep,
-            #                                                PSMort_TermExcl_AT$Age), c(5,6,1:4)]
-            PSMort_TermOnly_AT <- PSMort_TermOnly_AT[PSMort_TermOnly_AT$TimeStep == 3,
-                                                     c(5,6,1:4)]
-            
-            # Append to main output files
-            # PS_Removals <- rbind(PS_Removals, PSMort_AT)
-            # PS.TermExcl_Removals <- rbind(PS.TermExcl_Removals, PSMort_TermExcl_AT)
-            PS.TermOnly_Removals <- rbind(PS.TermOnly_Removals, PSMort_TermOnly_AT)
-        }
     }
 }
 
@@ -312,53 +289,53 @@ ColumnNames <- c(paste(RunName1, "_T1", sep = ""),
                  paste(RunName2, "_T3", sep = ""))
 
 # Summarize age 3-5 coastal abundances
-SummaryAge3to5Chin_Coastal <- summaryBy(Coastal_Abundance~Year+Run+TimeStep,
+Age3to5Chin_Coastal <- summaryBy(Coastal_Abundance~Year+Run+TimeStep,
                                         data = AvailablePrey[AvailablePrey$Age > 2, ],
                                         FUN = sum)
-SummaryAge3to5Chin_Coastal <- reshape(SummaryAge3to5Chin_Coastal, idvar = c("Year","Run"), 
+Age3to5Chin_Coastal <- reshape(Age3to5Chin_Coastal, idvar = c("Year","Run"), 
                                       timevar = "TimeStep", direction = "wide")
-SummaryAge3to5Chin_Coastal <- reshape(SummaryAge3to5Chin_Coastal, idvar = "Year", 
+Age3to5Chin_Coastal <- reshape(Age3to5Chin_Coastal, idvar = "Year", 
                                       timevar = "Run", direction = "wide")
-colnames(SummaryAge3to5Chin_Coastal)[2:7] <- ColumnNames
+colnames(Age3to5Chin_Coastal)[2:7] <- ColumnNames
 
 # Summarize age 3-5 coastal kCals
-SummaryKilos_Coastal <- summaryBy(Coastal_kCal~Year+Run+TimeStep, 
+Kilos_Coastal <- summaryBy(Coastal_kCal~Year+Run+TimeStep, 
                           data = AvailablePrey[AvailablePrey$Age > 2, ], FUN = sum)
-SummaryKilos_Coastal <- reshape(SummaryKilos_Coastal, idvar = c("Year","Run"), 
+Kilos_Coastal <- reshape(Kilos_Coastal, idvar = c("Year","Run"), 
                                 timevar = "TimeStep", direction = "wide")
-SummaryKilos_Coastal <- reshape(SummaryKilos_Coastal, idvar = "Year", timevar = "Run",
+Kilos_Coastal <- reshape(Kilos_Coastal, idvar = "Year", timevar = "Run",
                                 direction = "wide")
-colnames(SummaryKilos_Coastal)[2:7] <- ColumnNames
+colnames(Kilos_Coastal)[2:7] <- ColumnNames
 
 
 # Summarize age 3-5 inland abundances
-SummaryAge3to5Chin <- summaryBy(Inland_Abundance~Year+Run+TimeStep,
+Age3to5Chin_Inland <- summaryBy(Inland_Abundance~Year+Run+TimeStep,
                                 data = AvailablePrey[AvailablePrey$Age > 2, ], FUN = sum)
-SummaryAge3to5Chin <- reshape(SummaryAge3to5Chin, idvar = c("Year","Run"), 
+Age3to5Chin_Inland <- reshape(Age3to5Chin_Inland, idvar = c("Year","Run"), 
                               timevar = "TimeStep", direction = "wide")
-SummaryAge3to5Chin <- reshape(SummaryAge3to5Chin, idvar = "Year", timevar = "Run", 
+Age3to5Chin_Inland <- reshape(Age3to5Chin_Inland, idvar = "Year", timevar = "Run", 
                               direction = "wide")
-colnames(SummaryAge3to5Chin)[2:7] <- ColumnNames
+colnames(Age3to5Chin_Inland)[2:7] <- ColumnNames
 
 # Summarize age 3-5 inland kCals
-SummaryKilos <- summaryBy(Inland_kCal~Year+Run+TimeStep, 
+Kilos_Inland <- summaryBy(Inland_kCal~Year+Run+TimeStep, 
                           data = AvailablePrey[AvailablePrey$Age > 2, ], FUN = sum)
-SummaryKilos <- reshape(SummaryKilos, idvar = c("Year","Run"), timevar = "TimeStep",
+Kilos_Inland <- reshape(Kilos_Inland, idvar = c("Year","Run"), timevar = "TimeStep",
                         direction = "wide")
-SummaryKilos <- reshape(SummaryKilos, idvar = "Year", timevar = "Run", 
+Kilos_Inland <- reshape(Kilos_Inland, idvar = "Year", timevar = "Run", 
                         direction = "wide")
-colnames(SummaryKilos)[2:7] <- ColumnNames
+colnames(Kilos_Inland)[2:7] <- ColumnNames
 
 # Calculate likely after terminal in time step 3 and add to above 2 Puget Sound tables
 PS_Term_Mort_T3 <- summaryBy(TotMort+kCalTotMort~Year+Run+TimeStep,
                              data = PS.TermOnly_Removals[PS.TermOnly_Removals$Age > 2, ],
                              FUN = sum)
-SummaryAge3to5Chin$Likely_AfterTerm_T3 <- SummaryAge3to5Chin[ ,4] - PS_Term_Mort_T3$TotMort.sum
-colnames(SummaryAge3to5Chin)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
-SummaryAge3to5Chin <- SummaryAge3to5Chin[ ,c(1:4,8,5:7)]
-SummaryKilos$Likely_AfterTerm_T3 <- SummaryKilos[ ,4] - PS_Term_Mort_T3$kCalTotMort.sum
-colnames(SummaryKilos)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
-SummaryKilos <- SummaryKilos[ ,c(1:4,8,5:7)]
+Age3to5Chin_Inland$Likely_AfterTerm_T3 <- Age3to5Chin_Inland[ ,4] - PS_Term_Mort_T3$TotMort.sum
+colnames(Age3to5Chin_Inland)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
+Age3to5Chin_Inland <- Age3to5Chin_Inland[ ,c(1:4,8,5:7)]
+Kilos_Inland$Likely_AfterTerm_T3 <- Kilos_Inland[ ,4] - PS_Term_Mort_T3$kCalTotMort.sum
+colnames(Kilos_Inland)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
+Kilos_Inland <- Kilos_Inland[ ,c(1:4,8,5:7)]
 
 # Summarize Inland Needs table
 SummaryNeeds_Inland <- kCal_to_Need[kCal_to_Need$Region == "Inland" ,c(3:4,1:2,5:8)]
@@ -392,21 +369,29 @@ colnames(SummaryNeeds_Coastal)[3:11] <- c("Region",
                                           paste(RunName1, "_MinDPER_Max", sep = ""),
                                           paste(RunName1, "_MaxDPER_Max", sep = ""))
 
-# Summarize FisheryRedux table
-SummaryFisheryRedux <- as.data.frame(SummaryKilos[ ,1])
-SummaryFisheryRedux$Oct_Apr <- (SummaryKilos[ ,2] - SummaryKilos[ ,6]) / SummaryKilos[ ,6]
-SummaryFisheryRedux$May_Jun <- (SummaryKilos[ ,3] - SummaryKilos[ ,7]) / SummaryKilos[ ,7]
-SummaryFisheryRedux$Jul_Sep <- (SummaryKilos[ ,5] - SummaryKilos[ ,8]) / SummaryKilos[ ,8]
-colnames(SummaryFisheryRedux)[1] <- c("Year")
+# Summarize Inland FisheryRedux table
+FishRedux_Inland <- as.data.frame(Kilos_Inland[ ,1])
+FishRedux_Inland$Oct_Apr <- (Kilos_Inland[ ,2] - Kilos_Inland[ ,6]) / Kilos_Inland[ ,6]
+FishRedux_Inland$May_Jun <- (Kilos_Inland[ ,3] - Kilos_Inland[ ,7]) / Kilos_Inland[ ,7]
+FishRedux_Inland$Jul_Sep <- (Kilos_Inland[ ,5] - Kilos_Inland[ ,8]) / Kilos_Inland[ ,8]
+colnames(FishRedux_Inland)[1] <- c("Year")
+
+# Summarize Coastal FisheryRedux table
+FishRedux_Coastal <- as.data.frame(Kilos_Coastal[ ,1])
+FishRedux_Coastal$Oct_Apr <- (Kilos_Coastal[ ,2] - Kilos_Coastal[ ,5]) / Kilos_Coastal[ ,5]
+FishRedux_Coastal$May_Jun <- (Kilos_Coastal[ ,3] - Kilos_Coastal[ ,6]) / Kilos_Coastal[ ,6]
+FishRedux_Coastal$Jul_Sep <- (Kilos_Coastal[ ,4] - Kilos_Coastal[ ,7]) / Kilos_Coastal[ ,7]
+colnames(FishRedux_Coastal)[1] <- c("Year")
 
 # Export Summary Tables
-write.csv(SummaryAge3to5Chin_Coastal, paste(sep="", outfile, "SummaryAge3to5Chinook_Coastal.csv"))
-write.csv(SummaryKilos_Coastal, paste(sep="", outfile, "SummaryKilos_Coastal.csv"))
-write.csv(SummaryAge3to5Chin, paste(sep="", outfile, "SummaryAge3to5Chinook_Inland.csv"))
-write.csv(SummaryKilos, paste(sep="", outfile, "SummaryKilos_Inland.csv"))
+write.csv(Age3to5Chin_Coastal, paste(sep="", outfile, "SummaryAge3to5Chinook_Coastal.csv"))
+write.csv(Kilos_Coastal, paste(sep="", outfile, "SummaryKilos_Coastal.csv"))
+write.csv(Age3to5Chin_Inland, paste(sep="", outfile, "SummaryAge3to5Chinook_Inland.csv"))
+write.csv(Kilos_Inland, paste(sep="", outfile, "SummaryKilos_Inland.csv"))
 write.csv(SummaryNeeds_Inland, paste(sep="", outfile, "SummaryNeeds_Inland.csv"))
 write.csv(SummaryNeeds_Coastal, paste(sep="", outfile, "SummaryNeeds_Coastal.csv"))
-write.csv(SummaryFisheryRedux, paste(sep="", outfile, "SummaryFisheryRedux_Inland.csv"))
+write.csv(FishRedux_Inland, paste(sep="", outfile, "SummaryFisheryRedux_Inland.csv"))
+write.csv(FishRedux_Coastal, paste(sep="", outfile, "SummaryFisheryRedux_Coastal.csv"))
 
 ############################
 # GENERATE SUMMARY FIGURES #
