@@ -33,6 +33,7 @@ library(RODBC)
 library(readxl)
 library(doBy)
 library(ggplot2)
+library(xlsx)
 
 # Round data? Prob only necessary for validating calcs with existing spreadsheets
 RoundFlag = 0 # 0=No, 1=Yes
@@ -40,14 +41,17 @@ RoundFlag = 0 # 0=No, 1=Yes
 # Include natural mortality in abundances?
 AbundType = 0 # 0=Yes, 1=No
 
+# Set Excel Output file name
+outfile_name = "SRKW_ValidZeroUS_InclNatMort; 10.12.17.xlsx"
+
 # Set the paths:
 #   1 = Excel input file
 #   2 = FRAM db for 1st set of model runs (links to Col B in 'R_In_RunID' tab of above file)
 #   3 = FRAM db for 2nd set of model runs (links to Col C in 'R_In_RunID' tab of above file)
 #   4 = Output directory
-paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_New.xlsx",
+paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_10.11.17.xlsx",
              "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP.mdb",
-             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - ZeroPS.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - ZeroUS.mdb",
              "C:\\data\\FRAM\\SRKW\\R_Out\\")
 
 # Set the input file path for the database containing FRAM runs
@@ -296,6 +300,7 @@ Age3to5Chin_Coastal <- reshape(Age3to5Chin_Coastal, idvar = c("Year","Run"),
                                       timevar = "TimeStep", direction = "wide")
 Age3to5Chin_Coastal <- reshape(Age3to5Chin_Coastal, idvar = "Year", 
                                       timevar = "Run", direction = "wide")
+Age3to5Chin_Coastal[ ,c(2:7)] <- round(Age3to5Chin_Coastal[ ,c(2:7)], 0)
 colnames(Age3to5Chin_Coastal)[2:7] <- ColumnNames
 
 # Summarize age 3-5 coastal kCals
@@ -333,6 +338,7 @@ PS_Term_Mort_T3 <- summaryBy(TotMort+kCalTotMort~Year+Run+TimeStep,
 Age3to5Chin_Inland$Likely_AfterTerm_T3 <- Age3to5Chin_Inland[ ,4] - PS_Term_Mort_T3$TotMort.sum
 colnames(Age3to5Chin_Inland)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
 Age3to5Chin_Inland <- Age3to5Chin_Inland[ ,c(1:4,8,5:7)]
+Age3to5Chin_Inland[ ,c(2:8)] <- round(Age3to5Chin_Inland[ ,c(2:8)], 0)
 Kilos_Inland$Likely_AfterTerm_T3 <- Kilos_Inland[ ,4] - PS_Term_Mort_T3$kCalTotMort.sum
 colnames(Kilos_Inland)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
 Kilos_Inland <- Kilos_Inland[ ,c(1:4,8,5:7)]
@@ -374,6 +380,7 @@ FishRedux_Inland <- as.data.frame(Kilos_Inland[ ,1])
 FishRedux_Inland$Oct_Apr <- (Kilos_Inland[ ,2] - Kilos_Inland[ ,6]) / Kilos_Inland[ ,6]
 FishRedux_Inland$May_Jun <- (Kilos_Inland[ ,3] - Kilos_Inland[ ,7]) / Kilos_Inland[ ,7]
 FishRedux_Inland$Jul_Sep <- (Kilos_Inland[ ,5] - Kilos_Inland[ ,8]) / Kilos_Inland[ ,8]
+FishRedux_Inland[ ,c(2:4)] <- round(FishRedux_Inland[ ,c(2:4)], 4)
 colnames(FishRedux_Inland)[1] <- c("Year")
 
 # Summarize Coastal FisheryRedux table
@@ -381,17 +388,8 @@ FishRedux_Coastal <- as.data.frame(Kilos_Coastal[ ,1])
 FishRedux_Coastal$Oct_Apr <- (Kilos_Coastal[ ,2] - Kilos_Coastal[ ,5]) / Kilos_Coastal[ ,5]
 FishRedux_Coastal$May_Jun <- (Kilos_Coastal[ ,3] - Kilos_Coastal[ ,6]) / Kilos_Coastal[ ,6]
 FishRedux_Coastal$Jul_Sep <- (Kilos_Coastal[ ,4] - Kilos_Coastal[ ,7]) / Kilos_Coastal[ ,7]
+FishRedux_Coastal[ ,c(2:4)] <- round(FishRedux_Coastal[ ,c(2:4)], 4)
 colnames(FishRedux_Coastal)[1] <- c("Year")
-
-# Export Summary Tables
-write.csv(Age3to5Chin_Coastal, paste(sep="", outfile, "SummaryAge3to5Chinook_Coastal.csv"))
-write.csv(Kilos_Coastal, paste(sep="", outfile, "SummaryKilos_Coastal.csv"))
-write.csv(Age3to5Chin_Inland, paste(sep="", outfile, "SummaryAge3to5Chinook_Inland.csv"))
-write.csv(Kilos_Inland, paste(sep="", outfile, "SummaryKilos_Inland.csv"))
-write.csv(SummaryNeeds_Inland, paste(sep="", outfile, "SummaryNeeds_Inland.csv"))
-write.csv(SummaryNeeds_Coastal, paste(sep="", outfile, "SummaryNeeds_Coastal.csv"))
-write.csv(FishRedux_Inland, paste(sep="", outfile, "SummaryFisheryRedux_Inland.csv"))
-write.csv(FishRedux_Coastal, paste(sep="", outfile, "SummaryFisheryRedux_Coastal.csv"))
 
 ############################
 # GENERATE SUMMARY FIGURES #
@@ -435,7 +433,7 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"AbundanceCharts_Inland.jpg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"AbundanceCharts_Inland.jpeg",sep=""),p,height=5,width=7.5)
 
 
 #### COASTAL ABUNDANCE FIGURES ####
@@ -476,7 +474,7 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"AbundanceCharts_Coastal.jpg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"AbundanceCharts_Coastal.jpeg",sep=""),p,height=5,width=7.5)
 
 
 #### INLAND KILOCALORIE FIGURES ####
@@ -517,7 +515,7 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"KilocalorieCharts_Inland.jpg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"KilocalorieCharts_Inland.jpeg",sep=""),p,height=5,width=7.5)
 
 
 #### COASTAL KILOCALORIE FIGURES ####
@@ -558,10 +556,84 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"KilocalorieCharts_Coastal.jpg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"KilocalorieCharts_Coastal.jpeg",sep=""),p,height=5,width=7.5)
 
+###########
+# EXPORT! #
+###########
 
+wb <- createWorkbook(type = "xlsx")
 
+TABLE_COLNAMES_STYLE <- CellStyle(wb) + Font(wb, isBold = TRUE) +
+    Border(color = "black", position = c("BOTTOM"), pen = c("BORDER_THIN"))
+
+TABLE_COLNAMES_STYLE2 <- CellStyle(wb) + Font(wb, isBold = TRUE) + 
+    Alignment(wrapText = TRUE) + 
+    Border(color = "black", position = c("BOTTOM"), pen = c("BORDER_THIN"))
+
+sheet1 <- createSheet(wb, sheetName = "Abundance_Coastal")
+addDataFrame(Age3to5Chin_Coastal, sheet1, colnamesStyle = TABLE_COLNAMES_STYLE)
+setColumnWidth(sheet1, colIndex = c(1,2), colWidth = 8)
+setColumnWidth(sheet1, colIndex = c(3:8), colWidth = 19)
+
+addPicture(paste(outfile,"AbundanceCharts_Coastal.jpeg",sep=""),
+           sheet1, scale = 1, startRow = 27, startColumn = 1)
+
+sheet2 <- createSheet(wb, sheetName = "Kilocalories_Coastal")
+addDataFrame(Kilos_Coastal, sheet2, colnamesStyle = TABLE_COLNAMES_STYLE)
+setColumnWidth(sheet2, colIndex = c(1,2), colWidth = 8)
+setColumnWidth(sheet2, colIndex = c(3:8), colWidth = 19)
+
+addPicture(paste(outfile,"KilocalorieCharts_Coastal.jpeg",sep=""),
+           sheet2, scale = 1, startRow = 27, startColumn = 1)
+
+sheet3 <- createSheet(wb, sheetName = "FisheryRedux_Coastal")
+addDataFrame(FishRedux_Coastal, sheet3, colnamesStyle = TABLE_COLNAMES_STYLE)
+setColumnWidth(sheet3, colIndex = c(1,2), colWidth = 8)
+setColumnWidth(sheet3, colIndex = c(3:5), colWidth = 12)
+
+sheet4 <- createSheet(wb, sheetName = "NeedsRatio_Coastal")
+addDataFrame(SummaryNeeds_Coastal, sheet4, colnamesStyle = TABLE_COLNAMES_STYLE2)
+setColumnWidth(sheet4, colIndex = c(1,4), colWidth = 8)
+setColumnWidth(sheet4, colIndex = c(5:12), colWidth = 12)
+
+sheet5 <- createSheet(wb, sheetName = "Abundance_Inland")
+addDataFrame(Age3to5Chin_Inland, sheet5, colnamesStyle = TABLE_COLNAMES_STYLE)
+setColumnWidth(sheet5, colIndex = c(1,2), colWidth = 8)
+setColumnWidth(sheet5, colIndex = c(3:9), colWidth = 19)
+
+addPicture(paste(outfile,"AbundanceCharts_Inland.jpeg",sep=""),
+           sheet5, scale = 1, startRow = 27, startColumn = 1)
+
+sheet6 <- createSheet(wb, sheetName = "Kilocalories_Inland")
+addDataFrame(Kilos_Inland, sheet6, colnamesStyle = TABLE_COLNAMES_STYLE)
+setColumnWidth(sheet6, colIndex = c(1,2), colWidth = 8)
+setColumnWidth(sheet6, colIndex = c(3:9), colWidth = 19)
+
+addPicture(paste(outfile,"KilocalorieCharts_Inland.jpeg",sep=""),
+           sheet6, scale = 1, startRow = 27, startColumn = 1)
+
+sheet7 <- createSheet(wb, sheetName = "FisheryRedux_Inland")
+addDataFrame(FishRedux_Inland, sheet7, colnamesStyle = TABLE_COLNAMES_STYLE)
+setColumnWidth(sheet7, colIndex = c(1,2), colWidth = 8)
+setColumnWidth(sheet7, colIndex = c(3:5), colWidth = 12)
+
+sheet8 <- createSheet(wb, sheetName = "NeedsRatio_Inland")
+addDataFrame(SummaryNeeds_Inland, sheet8, colnamesStyle = TABLE_COLNAMES_STYLE2)
+setColumnWidth(sheet8, colIndex = c(1,4), colWidth = 8)
+setColumnWidth(sheet8, colIndex = c(5:12), colWidth = 12)
+
+saveWorkbook(wb, paste(outfile, outfile_name, sep = ""))
+
+# # Export Summary Tables to CSV files
+# write.csv(Age3to5Chin_Coastal, paste(sep="", outfile, "SummaryAge3to5Chinook_Coastal.csv"))
+# write.csv(Kilos_Coastal, paste(sep="", outfile, "SummaryKilos_Coastal.csv"))
+# write.csv(Age3to5Chin_Inland, paste(sep="", outfile, "SummaryAge3to5Chinook_Inland.csv"))
+# write.csv(Kilos_Inland, paste(sep="", outfile, "SummaryKilos_Inland.csv"))
+# write.csv(SummaryNeeds_Inland, paste(sep="", outfile, "SummaryNeeds_Inland.csv"))
+# write.csv(SummaryNeeds_Coastal, paste(sep="", outfile, "SummaryNeeds_Coastal.csv"))
+# write.csv(FishRedux_Inland, paste(sep="", outfile, "SummaryFisheryRedux_Inland.csv"))
+# write.csv(FishRedux_Coastal, paste(sep="", outfile, "SummaryFisheryRedux_Coastal.csv"))
 
 nd <- Sys.time()
 tm <- nd - strt
