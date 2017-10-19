@@ -42,16 +42,16 @@ RoundFlag = 0 # 0=No, 1=Yes
 AbundType = 0 # 0=Yes, 1=No
 
 # Set Excel Output file name
-outfile_name = "SRKW_ValidZeroUS_InclNatMort; 10.12.17.xlsx"
+outfile_name = "SRKW_ValidZeroPS_InclNatMort; 10.19.17.xlsx"
 
 # Set the paths:
 #   1 = Excel input file
 #   2 = FRAM db for 1st set of model runs (links to Col B in 'R_In_RunID' tab of above file)
 #   3 = FRAM db for 2nd set of model runs (links to Col C in 'R_In_RunID' tab of above file)
 #   4 = Output directory
-paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_10.11.17.xlsx",
+paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_10.19.17.xlsx",
              "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP.mdb",
-             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - ZeroUS.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - ZeroPS.mdb",
              "C:\\data\\FRAM\\SRKW\\R_Out\\")
 
 # Set the input file path for the database containing FRAM runs
@@ -268,12 +268,12 @@ for(i in minYr:maxYr) {
         kCal_TS <- merge(kCal_TS, Needs)
         kCal_TS$Min_DPER_Avg <- round(kCal_TS$kCal / kCal_TS$MinPER_Avg, 2)
         kCal_TS$Max_DPER_Avg <- round(kCal_TS$kCal / kCal_TS$MaxPER_Avg, 2)
-        kCal_TS$Min_DPER_Max <- round(kCal_TS$kCal / kCal_TS$MinPER_Max, 2)
-        kCal_TS$Max_DPER_Max <- round(kCal_TS$kCal / kCal_TS$MaxPER_Max, 2)
+        # kCal_TS$Min_DPER_Max <- round(kCal_TS$kCal / kCal_TS$MinPER_Max, 2)
+        # kCal_TS$Max_DPER_Max <- round(kCal_TS$kCal / kCal_TS$MaxPER_Max, 2)
         kCal_TS$Year <- c(rep(i, dim(kCal_TS)[1]))
         kCal_TS$Run <- c(rep(runType, dim(kCal_TS)[1]))
         
-        kCal_TS <- kCal_TS[order(kCal_TS$Region,kCal_TS$TimeStep), c(14:15,2,1,10:13)]
+        kCal_TS <- kCal_TS[order(kCal_TS$Region,kCal_TS$TimeStep), c(12:13,2,1,10:11)]
         
         # Append to main summary files
         AvailablePrey <- rbind(AvailablePrey, cohortSummary)
@@ -344,36 +344,28 @@ colnames(Kilos_Inland)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
 Kilos_Inland <- Kilos_Inland[ ,c(1:4,8,5:7)]
 
 # Summarize Inland Needs table
-SummaryNeeds_Inland <- kCal_to_Need[kCal_to_Need$Region == "Inland" ,c(3:4,1:2,5:8)]
+SummaryNeeds_Inland <- kCal_to_Need[kCal_to_Need$Region == "Inland" ,c(3:4,1:2,5:6)]
 SummaryNeeds_Inland <- reshape(SummaryNeeds_Inland, idvar = c("TimeStep", "Year"), 
                                timevar = "Run", direction = "wide")
 SummaryNeeds_Inland <- SummaryNeeds_Inland[order(SummaryNeeds_Inland$TimeStep), 
-                                           c(1:3,9:12,4:7)]
-colnames(SummaryNeeds_Inland)[3:11] <- c("Region", 
+                                           c(1:3,7:8,4:5)]
+colnames(SummaryNeeds_Inland)[3:7] <- c("Region", 
                                          paste(RunName2, "_MinDPER_Avg", sep = ""),
                                          paste(RunName2, "_MaxDPER_Avg", sep = ""),
-                                         paste(RunName2, "_MinDPER_Max", sep = ""),
-                                         paste(RunName2, "_MaxDPER_Max", sep = ""),
                                          paste(RunName1, "_MinDPER_Avg", sep = ""),
-                                         paste(RunName1, "_MaxDPER_Avg", sep = ""),
-                                         paste(RunName1, "_MinDPER_Max", sep = ""),
-                                         paste(RunName1, "_MaxDPER_Max", sep = ""))
+                                         paste(RunName1, "_MaxDPER_Avg", sep = ""))
 
 # Summarize Coastal Needs table
-SummaryNeeds_Coastal <- kCal_to_Need[kCal_to_Need$Region == "Coastal" ,c(3:4,1:2,5:8)]
+SummaryNeeds_Coastal <- kCal_to_Need[kCal_to_Need$Region == "Coastal" ,c(3:4,1:2,5:6)]
 SummaryNeeds_Coastal <- reshape(SummaryNeeds_Coastal, idvar = c("TimeStep", "Year"), 
                                timevar = "Run", direction = "wide")
 SummaryNeeds_Coastal <- SummaryNeeds_Coastal[order(SummaryNeeds_Coastal$TimeStep), 
-                                           c(1:3,9:12,4:7)]
-colnames(SummaryNeeds_Coastal)[3:11] <- c("Region", 
+                                           c(1:3,7:8,4:5)]
+colnames(SummaryNeeds_Coastal)[3:7] <- c("Region", 
                                           paste(RunName2, "_MinDPER_Avg", sep = ""),
                                           paste(RunName2, "_MaxDPER_Avg", sep = ""),
-                                          paste(RunName2, "_MinDPER_Max", sep = ""),
-                                          paste(RunName2, "_MaxDPER_Max", sep = ""),
                                           paste(RunName1, "_MinDPER_Avg", sep = ""),
-                                          paste(RunName1, "_MaxDPER_Avg", sep = ""),
-                                          paste(RunName1, "_MinDPER_Max", sep = ""),
-                                          paste(RunName1, "_MaxDPER_Max", sep = ""))
+                                          paste(RunName1, "_MaxDPER_Avg", sep = ""))
 
 # Summarize Inland FisheryRedux table
 FishRedux_Inland <- as.data.frame(Kilos_Inland[ ,1])
