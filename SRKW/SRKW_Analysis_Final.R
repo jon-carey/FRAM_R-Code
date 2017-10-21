@@ -42,7 +42,7 @@ RoundFlag = 0 # 0=No, 1=Yes
 AbundType = 0 # 0=Yes, 1=No
 
 # Set Excel Output file name
-outfile_name = "SRKW_ValidZeroPS_InclNatMort; 10.19.17.xlsx"
+outfile_name = "SRKW_ValidZeroUS_InclNatMort; 10.20.17.xlsx"
 
 # Set the paths:
 #   1 = Excel input file
@@ -51,7 +51,7 @@ outfile_name = "SRKW_ValidZeroPS_InclNatMort; 10.19.17.xlsx"
 #   4 = Output directory
 paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_10.19.17.xlsx",
              "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP.mdb",
-             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - ZeroPS.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - ZeroUS.mdb",
              "C:\\data\\FRAM\\SRKW\\R_Out\\")
 
 # Set the input file path for the database containing FRAM runs
@@ -176,6 +176,9 @@ for(i in minYr:maxYr) {
         # Identify Run Type
         runType <- colnames(RunIDs)[j]
         
+        # Reset TermMortFlag
+        TermMortFlag = 0
+        
         # Filter data to correct RunID
         cohort <- Cohort[Cohort$RunID == runID, ]
         mort <- Mort[Mort$RunID == runID, ]
@@ -183,10 +186,12 @@ for(i in minYr:maxYr) {
         ########################################################################
         # Calculate Chinook and kCals removed by PS fisheries in 'Likely' runs #
         ########################################################################
-        if(j==2) {
-            # Merge with kCal_Age and FishFlag
-            mort <- merge(mort, FishFlag)
-            mort <- merge(mort, kCal_Age)
+        # Merge with kCal_Age and FishFlag
+        mort <- merge(mort, FishFlag)
+        mort <- merge(mort, kCal_Age)
+        
+        if(sum(mort[mort$Flag == 2, 6]) > 0) {
+            TermMortFlag = 1
             
             # Discount or exclude morts in PS terminal fisheries where SRKWs have not 
             # been or have rarely been observed
@@ -218,7 +223,7 @@ for(i in minYr:maxYr) {
             # Append to main output files
             PS.TermOnly_Removals <- rbind(PS.TermOnly_Removals, PSMort_TermOnly_AT)
         }
-                
+        
         ##########################################################
         # Calculate abundance and kCal of available Chinook prey #
         ##########################################################
@@ -256,9 +261,11 @@ for(i in minYr:maxYr) {
                              data = cohortSummary[cohortSummary$Age > 2, ], FUN = sum)
         colnames(kCal_TS)[2:3] <- c("Inland","Coastal")
         
-        # Remove PS terminal fishery kCals
-        PS_T3_Term_kCal <- sum(PSMort_TermOnly_AT[PSMort_TermOnly_AT$Age != 2, 6])
-        kCal_TS[3,2] <- kCal_TS[3,2] - PS_T3_Term_kCal
+        # Remove PS terminal fishery kCals (if exist)
+        if(TermMortFlag == 1) {
+            PS_T3_Term_kCal <- sum(PSMort_TermOnly_AT[PSMort_TermOnly_AT$Age != 2, 6])
+            kCal_TS[3,2] <- kCal_TS[3,2] - PS_T3_Term_kCal
+        }
         
         # Reshape into long format
         kCal_TS <- reshape(kCal_TS, direction = "long", varying = list(names(kCal_TS)[2:3]),
@@ -331,17 +338,28 @@ Kilos_Inland <- reshape(Kilos_Inland, idvar = "Year", timevar = "Run",
                         direction = "wide")
 colnames(Kilos_Inland)[2:7] <- ColumnNames
 
-# Calculate likely after terminal in time step 3 and add to above 2 Puget Sound tables
+# Calculate abundance and kCal after terminal in TS 3 and add to above 2 inland tables
 PS_Term_Mort_T3 <- summaryBy(TotMort+kCalTotMort~Year+Run+TimeStep,
                              data = PS.TermOnly_Removals[PS.TermOnly_Removals$Age > 2, ],
                              FUN = sum)
-Age3to5Chin_Inland$Likely_AfterTerm_T3 <- Age3to5Chin_Inland[ ,4] - PS_Term_Mort_T3$TotMort.sum
-colnames(Age3to5Chin_Inland)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
-Age3to5Chin_Inland <- Age3to5Chin_Inland[ ,c(1:4,8,5:7)]
-Age3to5Chin_Inland[ ,c(2:8)] <- round(Age3to5Chin_Inland[ ,c(2:8)], 0)
-Kilos_Inland$Likely_AfterTerm_T3 <- Kilos_Inland[ ,4] - PS_Term_Mort_T3$kCalTotMort.sum
-colnames(Kilos_Inland)[8] <- paste(RunName1, "_AfterTerm_T3", sep = "")
-Kilos_Inland <- Kilos_Inland[ ,c(1:4,8,5:7)]
+PS_Term_Mort_T3_Run1 <- PS_Term_Mort_T3[PS_Term_Mort_T3$Run == RunName1, ]
+PS_Term_Mort_T3_Run2 <- PS_Term_Mort_T3[PS_Term_Mort_T3$Run == RunName2, ]
+
+if(dim(Age3to5Chin_Inland)[1] == dim(PS_Term_Mort_T3_Run1)[1]) {
+    Age3to5Chin_Inland[ ,4] <- Age3to5Chin_Inland[ ,4] - PS_Term_Mort_T3_Run1$TotMort.sum
+    colnames(Age3to5Chin_Inland)[4] <- paste(RunName1, "_AfterTerm_T3", sep = "")
+    Kilos_Inland[ ,4] <- Kilos_Inland[ ,4] - PS_Term_Mort_T3_Run1$kCalTotMort.sum
+    colnames(Kilos_Inland)[4] <- paste(RunName1, "_AfterTerm_T3", sep = "")
+}
+if(dim(Age3to5Chin_Inland)[1] == dim(PS_Term_Mort_T3_Run2)[1]) {
+    Age3to5Chin_Inland[ ,7] <- Age3to5Chin_Inland[ ,7] - PS_Term_Mort_T3_Run2$TotMort.sum
+    colnames(Age3to5Chin_Inland)[7] <- paste(RunName2, "_AfterTerm_T3", sep = "")
+    Kilos_Inland[ ,7] <- Kilos_Inland[ ,7] - PS_Term_Mort_T3_Run2$kCalTotMort.sum
+    colnames(Kilos_Inland)[7] <- paste(RunName2, "_AfterTerm_T3", sep = "")
+}
+
+Age3to5Chin_Inland[ ,c(2:7)] <- round(Age3to5Chin_Inland[ ,c(2:7)], 0)
+Kilos_Inland[ ,c(2:7)] <- round(Kilos_Inland[ ,c(2:7)], 0)
 
 # Summarize Inland Needs table
 SummaryNeeds_Inland <- kCal_to_Need[kCal_to_Need$Region == "Inland" ,c(3:4,1:2,5:6)]
@@ -369,9 +387,9 @@ colnames(SummaryNeeds_Coastal)[3:7] <- c("Region",
 
 # Summarize Inland FisheryRedux table
 FishRedux_Inland <- as.data.frame(Kilos_Inland[ ,1])
-FishRedux_Inland$Oct_Apr <- (Kilos_Inland[ ,2] - Kilos_Inland[ ,6]) / Kilos_Inland[ ,6]
-FishRedux_Inland$May_Jun <- (Kilos_Inland[ ,3] - Kilos_Inland[ ,7]) / Kilos_Inland[ ,7]
-FishRedux_Inland$Jul_Sep <- (Kilos_Inland[ ,5] - Kilos_Inland[ ,8]) / Kilos_Inland[ ,8]
+FishRedux_Inland$Oct_Apr <- (Kilos_Inland[ ,2] - Kilos_Inland[ ,5]) / Kilos_Inland[ ,5]
+FishRedux_Inland$May_Jun <- (Kilos_Inland[ ,3] - Kilos_Inland[ ,6]) / Kilos_Inland[ ,6]
+FishRedux_Inland$Jul_Sep <- (Kilos_Inland[ ,4] - Kilos_Inland[ ,7]) / Kilos_Inland[ ,7]
 FishRedux_Inland[ ,c(2:4)] <- round(FishRedux_Inland[ ,c(2:4)], 4)
 colnames(FishRedux_Inland)[1] <- c("Year")
 
@@ -550,6 +568,89 @@ p <- p + facet_grid(TimeStep ~ .) +
 
 ggsave(paste(outfile,"KilocalorieCharts_Coastal.jpeg",sep=""),p,height=5,width=7.5)
 
+
+#### COASTAL NEEDS FIGURES (Max PER)####
+figdat <- summaryBy(Max_DPER_Avg~Year+Run+TimeStep, 
+                    data = kCal_to_Need[kCal_to_Need$Region == "Coastal", ], FUN = sum)
+figdat[figdat$TimeStep == 1, 3] <- "Oct-Apr"
+figdat[figdat$TimeStep == 2, 3] <- "May-Jun"
+figdat[figdat$TimeStep == 3, 3] <- "Jul-Sep"
+
+# Add factors so things appear in the desired order
+figdat$TimeStep <- factor(figdat$TimeStep, levels = c("Oct-Apr",
+                                                      "May-Jun",
+                                                      "Jul-Sep"))
+figdat$Run <- factor(figdat$Run, levels = c(RunName2, RunName1))
+
+# Create plot
+p <- ggplot(data = figdat, aes(Year, Max_DPER_Avg.sum, fill=Run))
+p <- p + geom_bar(width=0.5, color="black", alpha=1, position="dodge",
+                  stat="identity")
+p <- p + facet_grid(TimeStep ~ .) +
+    theme(strip.text.x=element_text(size=15)) +
+    ggtitle("Coastal Kilcalorie Availability to Needs Ratio (Max PER)") +
+    theme(plot.title=element_text(size=15, face="bold")) + #make title bold
+    theme(axis.title.x=element_text(size=10),
+          axis.text.x=element_text(angle=90, size=10,color="black", hjust=1,
+                                   vjust=0.25)) +
+    theme(axis.title.y=element_text(size=10, vjust=1.3),
+          axis.text.y=element_text(angle=0, size=10,color="black")) + #resize tick labels, move axis lablel (vjust)
+    ylab("Available Kilocalories / Needs") + xlab("Fishing Year") +
+    theme(legend.title=element_text(size=10, face="bold")) +
+    theme(legend.text=element_text(size=10)) +
+    theme(panel.grid.major.x=element_blank(),
+          panel.grid.minor.x=element_blank()) + #removes the vertical background grid
+    # theme(panel.grid.major.y=element_blank(),
+    #       panel.grid.minor.y=element_blank()) + #removes the horizontal background grid
+    # theme(panel.background=element_blank()) + #removes the gray filled back
+    scale_x_continuous(breaks = c(minYr:maxYr)) + #this adds labels for all years to the x-axis
+    theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
+    theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
+
+ggsave(paste(outfile,"MaxNeeds_Coastal.jpeg",sep=""),p,height=5,width=7.5)
+
+
+#### INLAND NEEDS FIGURES (Max PER)####
+figdat <- summaryBy(Max_DPER_Avg~Year+Run+TimeStep, 
+                    data = kCal_to_Need[kCal_to_Need$Region == "Inland", ], FUN = sum)
+figdat[figdat$TimeStep == 1, 3] <- "Oct-Apr"
+figdat[figdat$TimeStep == 2, 3] <- "May-Jun"
+figdat[figdat$TimeStep == 3, 3] <- "Jul-Sep"
+
+# Add factors so things appear in the desired order
+figdat$TimeStep <- factor(figdat$TimeStep, levels = c("Oct-Apr",
+                                                      "May-Jun",
+                                                      "Jul-Sep"))
+figdat$Run <- factor(figdat$Run, levels = c(RunName2, RunName1))
+
+# Create plot
+p <- ggplot(data = figdat, aes(Year, Max_DPER_Avg.sum, fill=Run))
+p <- p + geom_bar(width=0.5, color="black", alpha=1, position="dodge",
+                  stat="identity")
+p <- p + facet_grid(TimeStep ~ .) +
+    theme(strip.text.x=element_text(size=15)) +
+    ggtitle("Inland Kilcalorie Availability to Needs Ratio (Max PER)") +
+    theme(plot.title=element_text(size=15, face="bold")) + #make title bold
+    theme(axis.title.x=element_text(size=10),
+          axis.text.x=element_text(angle=90, size=10,color="black", hjust=1,
+                                   vjust=0.25)) +
+    theme(axis.title.y=element_text(size=10, vjust=1.3),
+          axis.text.y=element_text(angle=0, size=10,color="black")) + #resize tick labels, move axis lablel (vjust)
+    ylab("Available Kilocalories / Needs") + xlab("Fishing Year") +
+    theme(legend.title=element_text(size=10, face="bold")) +
+    theme(legend.text=element_text(size=10)) +
+    theme(panel.grid.major.x=element_blank(),
+          panel.grid.minor.x=element_blank()) + #removes the vertical background grid
+    # theme(panel.grid.major.y=element_blank(),
+    #       panel.grid.minor.y=element_blank()) + #removes the horizontal background grid
+    # theme(panel.background=element_blank()) + #removes the gray filled back
+    scale_x_continuous(breaks = c(minYr:maxYr)) + #this adds labels for all years to the x-axis
+    theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
+    theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
+
+ggsave(paste(outfile,"MaxNeeds_Inland.jpeg",sep=""),p,height=5,width=7.5)
+
+
 ###########
 # EXPORT! #
 ###########
@@ -569,7 +670,7 @@ setColumnWidth(sheet1, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet1, colIndex = c(3:8), colWidth = 19)
 
 addPicture(paste(outfile,"AbundanceCharts_Coastal.jpeg",sep=""),
-           sheet1, scale = 1, startRow = 27, startColumn = 1)
+           sheet1, scale = 1, startRow = dim(Age3to5Chin_Coastal)[1]+4, startColumn = 1)
 
 sheet2 <- createSheet(wb, sheetName = "Kilocalories_Coastal")
 addDataFrame(Kilos_Coastal, sheet2, colnamesStyle = TABLE_COLNAMES_STYLE)
@@ -577,7 +678,7 @@ setColumnWidth(sheet2, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet2, colIndex = c(3:8), colWidth = 19)
 
 addPicture(paste(outfile,"KilocalorieCharts_Coastal.jpeg",sep=""),
-           sheet2, scale = 1, startRow = 27, startColumn = 1)
+           sheet2, scale = 1, startRow = dim(Kilos_Coastal)[1]+4, startColumn = 1)
 
 sheet3 <- createSheet(wb, sheetName = "FisheryRedux_Coastal")
 addDataFrame(FishRedux_Coastal, sheet3, colnamesStyle = TABLE_COLNAMES_STYLE)
@@ -589,13 +690,16 @@ addDataFrame(SummaryNeeds_Coastal, sheet4, colnamesStyle = TABLE_COLNAMES_STYLE2
 setColumnWidth(sheet4, colIndex = c(1,4), colWidth = 8)
 setColumnWidth(sheet4, colIndex = c(5:12), colWidth = 12)
 
+addPicture(paste(outfile,"MaxNeeds_Coastal.jpeg",sep=""),
+           sheet4, scale = 1, startRow = 2, startColumn = 10)
+
 sheet5 <- createSheet(wb, sheetName = "Abundance_Inland")
 addDataFrame(Age3to5Chin_Inland, sheet5, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet5, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet5, colIndex = c(3:9), colWidth = 19)
 
 addPicture(paste(outfile,"AbundanceCharts_Inland.jpeg",sep=""),
-           sheet5, scale = 1, startRow = 27, startColumn = 1)
+           sheet5, scale = 1, startRow = dim(Age3to5Chin_Inland)[1]+4, startColumn = 1)
 
 sheet6 <- createSheet(wb, sheetName = "Kilocalories_Inland")
 addDataFrame(Kilos_Inland, sheet6, colnamesStyle = TABLE_COLNAMES_STYLE)
@@ -603,7 +707,7 @@ setColumnWidth(sheet6, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet6, colIndex = c(3:9), colWidth = 19)
 
 addPicture(paste(outfile,"KilocalorieCharts_Inland.jpeg",sep=""),
-           sheet6, scale = 1, startRow = 27, startColumn = 1)
+           sheet6, scale = 1, startRow = dim(Kilos_Inland)[1]+4, startColumn = 1)
 
 sheet7 <- createSheet(wb, sheetName = "FisheryRedux_Inland")
 addDataFrame(FishRedux_Inland, sheet7, colnamesStyle = TABLE_COLNAMES_STYLE)
@@ -614,6 +718,9 @@ sheet8 <- createSheet(wb, sheetName = "NeedsRatio_Inland")
 addDataFrame(SummaryNeeds_Inland, sheet8, colnamesStyle = TABLE_COLNAMES_STYLE2)
 setColumnWidth(sheet8, colIndex = c(1,4), colWidth = 8)
 setColumnWidth(sheet8, colIndex = c(5:12), colWidth = 12)
+
+addPicture(paste(outfile,"MaxNeeds_Inland.jpeg",sep=""),
+           sheet8, scale = 1, startRow = 2, startColumn = 10)
 
 saveWorkbook(wb, paste(outfile, outfile_name, sep = ""))
 
