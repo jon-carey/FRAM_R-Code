@@ -42,16 +42,16 @@ RoundFlag = 0 # 0=No, 1=Yes
 AbundType = 0 # 0=Yes, 1=No
 
 # Set Excel Output file name
-outfile_name = "SRKW_ValidZeroUS_InclNatMort; 10.20.17.xlsx"
+outfile_name = "SRKW_ValidCanRed25_UpdatedLipids; 10.23.17.xlsx"
 
 # Set the paths:
 #   1 = Excel input file
 #   2 = FRAM db for 1st set of model runs (links to Col B in 'R_In_RunID' tab of above file)
 #   3 = FRAM db for 2nd set of model runs (links to Col C in 'R_In_RunID' tab of above file)
 #   4 = Output directory
-paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_10.19.17.xlsx",
+paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_10.23.17; UpdatedLipids_CanRed25.xlsx",
              "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP.mdb",
-             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - ZeroUS.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - CanRed25.mdb",
              "C:\\data\\FRAM\\SRKW\\R_Out\\")
 
 # Set the input file path for the database containing FRAM runs
@@ -443,7 +443,7 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"AbundanceCharts_Inland.jpeg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"AbundanceCharts_Inland_",RunName2,".jpeg",sep=""),p,height=5,width=7.5)
 
 
 #### COASTAL ABUNDANCE FIGURES ####
@@ -484,7 +484,7 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"AbundanceCharts_Coastal.jpeg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"AbundanceCharts_Coastal_",RunName2,".jpeg",sep=""),p,height=5,width=7.5)
 
 
 #### INLAND KILOCALORIE FIGURES ####
@@ -525,7 +525,7 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"KilocalorieCharts_Inland.jpeg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"KilocalorieCharts_Inland_",RunName2,".jpeg",sep=""),p,height=5,width=7.5)
 
 
 #### COASTAL KILOCALORIE FIGURES ####
@@ -566,7 +566,7 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"KilocalorieCharts_Coastal.jpeg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"KilocalorieCharts_Coastal_",RunName2,".jpeg",sep=""),p,height=5,width=7.5)
 
 
 #### COASTAL NEEDS FIGURES (Max PER)####
@@ -607,7 +607,7 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"MaxNeeds_Coastal.jpeg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"MaxNeeds_Coastal_",RunName2,".jpeg",sep=""),p,height=5,width=7.5)
 
 
 #### INLAND NEEDS FIGURES (Max PER)####
@@ -648,7 +648,7 @@ p <- p + facet_grid(TimeStep ~ .) +
     theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
     theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
 
-ggsave(paste(outfile,"MaxNeeds_Inland.jpeg",sep=""),p,height=5,width=7.5)
+ggsave(paste(outfile,"MaxNeeds_Inland_",RunName2,".jpeg",sep=""),p,height=5,width=7.5)
 
 
 ###########
@@ -669,7 +669,7 @@ addDataFrame(Age3to5Chin_Coastal, sheet1, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet1, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet1, colIndex = c(3:8), colWidth = 19)
 
-addPicture(paste(outfile,"AbundanceCharts_Coastal.jpeg",sep=""),
+addPicture(paste(outfile,"AbundanceCharts_Coastal_",RunName2,".jpeg",sep=""),
            sheet1, scale = 1, startRow = dim(Age3to5Chin_Coastal)[1]+4, startColumn = 1)
 
 sheet2 <- createSheet(wb, sheetName = "Kilocalories_Coastal")
@@ -677,7 +677,7 @@ addDataFrame(Kilos_Coastal, sheet2, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet2, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet2, colIndex = c(3:8), colWidth = 19)
 
-addPicture(paste(outfile,"KilocalorieCharts_Coastal.jpeg",sep=""),
+addPicture(paste(outfile,"KilocalorieCharts_Coastal_",RunName2,".jpeg",sep=""),
            sheet2, scale = 1, startRow = dim(Kilos_Coastal)[1]+4, startColumn = 1)
 
 sheet3 <- createSheet(wb, sheetName = "FisheryRedux_Coastal")
@@ -690,7 +690,7 @@ addDataFrame(SummaryNeeds_Coastal, sheet4, colnamesStyle = TABLE_COLNAMES_STYLE2
 setColumnWidth(sheet4, colIndex = c(1,4), colWidth = 8)
 setColumnWidth(sheet4, colIndex = c(5:12), colWidth = 12)
 
-addPicture(paste(outfile,"MaxNeeds_Coastal.jpeg",sep=""),
+addPicture(paste(outfile,"MaxNeeds_Coastal_",RunName2,".jpeg",sep=""),
            sheet4, scale = 1, startRow = 2, startColumn = 10)
 
 sheet5 <- createSheet(wb, sheetName = "Abundance_Inland")
@@ -698,7 +698,7 @@ addDataFrame(Age3to5Chin_Inland, sheet5, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet5, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet5, colIndex = c(3:9), colWidth = 19)
 
-addPicture(paste(outfile,"AbundanceCharts_Inland.jpeg",sep=""),
+addPicture(paste(outfile,"AbundanceCharts_Inland_",RunName2,".jpeg",sep=""),
            sheet5, scale = 1, startRow = dim(Age3to5Chin_Inland)[1]+4, startColumn = 1)
 
 sheet6 <- createSheet(wb, sheetName = "Kilocalories_Inland")
@@ -706,7 +706,7 @@ addDataFrame(Kilos_Inland, sheet6, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet6, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet6, colIndex = c(3:9), colWidth = 19)
 
-addPicture(paste(outfile,"KilocalorieCharts_Inland.jpeg",sep=""),
+addPicture(paste(outfile,"KilocalorieCharts_Inland_",RunName2,".jpeg",sep=""),
            sheet6, scale = 1, startRow = dim(Kilos_Inland)[1]+4, startColumn = 1)
 
 sheet7 <- createSheet(wb, sheetName = "FisheryRedux_Inland")
@@ -719,7 +719,7 @@ addDataFrame(SummaryNeeds_Inland, sheet8, colnamesStyle = TABLE_COLNAMES_STYLE2)
 setColumnWidth(sheet8, colIndex = c(1,4), colWidth = 8)
 setColumnWidth(sheet8, colIndex = c(5:12), colWidth = 12)
 
-addPicture(paste(outfile,"MaxNeeds_Inland.jpeg",sep=""),
+addPicture(paste(outfile,"MaxNeeds_Inland_",RunName2,".jpeg",sep=""),
            sheet8, scale = 1, startRow = 2, startColumn = 10)
 
 saveWorkbook(wb, paste(outfile, outfile_name, sep = ""))
