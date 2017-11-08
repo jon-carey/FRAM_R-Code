@@ -42,16 +42,16 @@ RoundFlag = 0 # 0=No, 1=Yes
 AbundType = 0 # 0=Yes, 1=No
 
 # Set Excel Output file name
-outfile_name = "SRKW_ValidCanRed25_UpdatedLipids; 10.23.17.xlsx"
+outfile_name = "SRKW_Valid_AKRed12.5-CanRed25_UpdatedLipids; 11.8.17.xlsx"
 
 # Set the paths:
 #   1 = Excel input file
 #   2 = FRAM db for 1st set of model runs (links to Col B in 'R_In_RunID' tab of above file)
 #   3 = FRAM db for 2nd set of model runs (links to Col C in 'R_In_RunID' tab of above file)
 #   4 = Output directory
-paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_10.23.17; UpdatedLipids_CanRed25.xlsx",
+paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_11.7.17; UpdatedLipids.xlsx",
              "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP.mdb",
-             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - CanRed25.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_In\\Valid2016_NewBP-AKRed12.5_BCRed25_11.7.17.mdb",
              "C:\\data\\FRAM\\SRKW\\R_Out\\")
 
 # Set the input file path for the database containing FRAM runs
@@ -385,21 +385,21 @@ colnames(SummaryNeeds_Coastal)[3:7] <- c("Region",
                                           paste(RunName1, "_MinDPER_Avg", sep = ""),
                                           paste(RunName1, "_MaxDPER_Avg", sep = ""))
 
-# Summarize Inland FisheryRedux table
-FishRedux_Inland <- as.data.frame(Kilos_Inland[ ,1])
-FishRedux_Inland$Oct_Apr <- (Kilos_Inland[ ,2] - Kilos_Inland[ ,5]) / Kilos_Inland[ ,5]
-FishRedux_Inland$May_Jun <- (Kilos_Inland[ ,3] - Kilos_Inland[ ,6]) / Kilos_Inland[ ,6]
-FishRedux_Inland$Jul_Sep <- (Kilos_Inland[ ,4] - Kilos_Inland[ ,7]) / Kilos_Inland[ ,7]
-FishRedux_Inland[ ,c(2:4)] <- round(FishRedux_Inland[ ,c(2:4)], 4)
-colnames(FishRedux_Inland)[1] <- c("Year")
+# Summarize Inland kCal%Inc table
+kCalInc_Inland <- as.data.frame(Kilos_Inland[ ,1])
+kCalInc_Inland$Oct_Apr <- (Kilos_Inland[ ,5] - Kilos_Inland[ ,2]) / Kilos_Inland[ ,2]
+kCalInc_Inland$May_Jun <- (Kilos_Inland[ ,6] - Kilos_Inland[ ,3]) / Kilos_Inland[ ,3]
+kCalInc_Inland$Jul_Sep <- (Kilos_Inland[ ,7] - Kilos_Inland[ ,4]) / Kilos_Inland[ ,4]
+kCalInc_Inland[ ,c(2:4)] <- round(kCalInc_Inland[ ,c(2:4)], 4)
+colnames(kCalInc_Inland)[1] <- c("Year")
 
-# Summarize Coastal FisheryRedux table
-FishRedux_Coastal <- as.data.frame(Kilos_Coastal[ ,1])
-FishRedux_Coastal$Oct_Apr <- (Kilos_Coastal[ ,2] - Kilos_Coastal[ ,5]) / Kilos_Coastal[ ,5]
-FishRedux_Coastal$May_Jun <- (Kilos_Coastal[ ,3] - Kilos_Coastal[ ,6]) / Kilos_Coastal[ ,6]
-FishRedux_Coastal$Jul_Sep <- (Kilos_Coastal[ ,4] - Kilos_Coastal[ ,7]) / Kilos_Coastal[ ,7]
-FishRedux_Coastal[ ,c(2:4)] <- round(FishRedux_Coastal[ ,c(2:4)], 4)
-colnames(FishRedux_Coastal)[1] <- c("Year")
+# Summarize Coastal kCal%Inc table
+kCalInc_Coastal <- as.data.frame(Kilos_Coastal[ ,1])
+kCalInc_Coastal$Oct_Apr <- (Kilos_Coastal[ ,5] - Kilos_Coastal[ ,2]) / Kilos_Coastal[ ,2]
+kCalInc_Coastal$May_Jun <- (Kilos_Coastal[ ,6] - Kilos_Coastal[ ,3]) / Kilos_Coastal[ ,3]
+kCalInc_Coastal$Jul_Sep <- (Kilos_Coastal[ ,7] - Kilos_Coastal[ ,4]) / Kilos_Coastal[ ,4]
+kCalInc_Coastal[ ,c(2:4)] <- round(kCalInc_Coastal[ ,c(2:4)], 4)
+colnames(kCalInc_Coastal)[1] <- c("Year")
 
 ############################
 # GENERATE SUMMARY FIGURES #
@@ -680,8 +680,8 @@ setColumnWidth(sheet2, colIndex = c(3:8), colWidth = 19)
 addPicture(paste(outfile,"KilocalorieCharts_Coastal_",RunName2,".jpeg",sep=""),
            sheet2, scale = 1, startRow = dim(Kilos_Coastal)[1]+4, startColumn = 1)
 
-sheet3 <- createSheet(wb, sheetName = "FisheryRedux_Coastal")
-addDataFrame(FishRedux_Coastal, sheet3, colnamesStyle = TABLE_COLNAMES_STYLE)
+sheet3 <- createSheet(wb, sheetName = "kCal%Inc_Coastal")
+addDataFrame(kCalInc_Coastal, sheet3, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet3, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet3, colIndex = c(3:5), colWidth = 12)
 
@@ -709,8 +709,8 @@ setColumnWidth(sheet6, colIndex = c(3:9), colWidth = 19)
 addPicture(paste(outfile,"KilocalorieCharts_Inland_",RunName2,".jpeg",sep=""),
            sheet6, scale = 1, startRow = dim(Kilos_Inland)[1]+4, startColumn = 1)
 
-sheet7 <- createSheet(wb, sheetName = "FisheryRedux_Inland")
-addDataFrame(FishRedux_Inland, sheet7, colnamesStyle = TABLE_COLNAMES_STYLE)
+sheet7 <- createSheet(wb, sheetName = "kCal%Inc_Inland")
+addDataFrame(kCalInc_Inland, sheet7, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet7, colIndex = c(1,2), colWidth = 8)
 setColumnWidth(sheet7, colIndex = c(3:5), colWidth = 12)
 
