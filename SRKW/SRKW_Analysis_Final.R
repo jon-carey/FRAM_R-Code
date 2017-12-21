@@ -6,6 +6,10 @@
 # analysis for a renewed PS Chinook RMP and Biological Opinion.
 #
 # Note: before running, ensure that the paths below are set to the correct directories
+#   outfile_name; this is what the program will name the excel output file that it
+#           generates.  If the file does not exist the program will create it.  If
+#           it does exist it will be overwritten.  Ensure that the file is not open
+#           before running the program or it will throw an error.
 #   Path 1; SRKW input excel file - this file contains numerous tabs with static input
 #           data necessary for the analysis. Double check that the RunIDs in the
 #           'R_In_RunIDs' tab reference the appropriate runs in the databse below
@@ -18,7 +22,7 @@
 # Warning: due the some of the packages used, this program requires that the 32-bit 
 # version of R software is used.
 #
-# JC; Oct 2017
+# JC; Dec 2017
 #######################################################################################
 
 
@@ -141,7 +145,7 @@ if(RoundFlag == 1) {
     Cohort78$StartCohort <- round(Cohort78$StartCohort,0)
 }
 
-# Filter data to Time Steps 1-3 and remove unneccessary fields
+# Remove unneccessary fields
 Cohort78 <- Cohort78[ , c(2:5,8:10)]
 Mort78 <- Mort78[ , c(2:10,12:15)]
 
@@ -187,9 +191,9 @@ for(i in minYr:maxYr) {
         cohort <- Cohort[Cohort$RunID == runID, ]
         mort <- Mort[Mort$RunID == runID, ]
 
-        ########################################################################
-        # Calculate Chinook and kCals removed by PS fisheries in 'Likely' runs #
-        ########################################################################
+        ################################################################
+        # Calculate Chinook and kCals removed by PS terminal fisheries #
+        ################################################################
         # Merge with kCal_Age and FishFlag
         mort <- merge(mort, FishFlag)
         mort <- merge(mort, kCal_Age)
@@ -391,7 +395,7 @@ SummaryNeeds_Inland <- kCal_to_Need[kCal_to_Need$Region == "Inland" ,c(3:4,1:2,5
 SummaryNeeds_Inland <- reshape(SummaryNeeds_Inland, idvar = c("TimeStep", "Year"), 
                                timevar = "Run", direction = "wide")
 SummaryNeeds_Inland <- SummaryNeeds_Inland[order(SummaryNeeds_Inland$TimeStep), 
-                                           c(1:3,7:8,4:5)]
+                                           c(1:5,7:8)]
 colnames(SummaryNeeds_Inland)[3:7] <- c("Region", "MinDPER_Avg", "MaxDPER_Avg", 
                                         "MinDPER_Avg ", "MaxDPER_Avg ")
 
@@ -400,7 +404,7 @@ SummaryNeeds_Coastal <- kCal_to_Need[kCal_to_Need$Region == "Coastal" ,c(3:4,1:2
 SummaryNeeds_Coastal <- reshape(SummaryNeeds_Coastal, idvar = c("TimeStep", "Year"), 
                                timevar = "Run", direction = "wide")
 SummaryNeeds_Coastal <- SummaryNeeds_Coastal[order(SummaryNeeds_Coastal$TimeStep), 
-                                           c(1:3,7:8,4:5)]
+                                           c(1:5,7:8)]
 colnames(SummaryNeeds_Coastal)[3:7] <- c("Region", "MinDPER_Avg", "MaxDPER_Avg", 
                                          "MinDPER_Avg ", "MaxDPER_Avg ")
 
@@ -886,10 +890,10 @@ setColumnWidth(sheet4, colIndex = c(5:12), colWidth = 15)
 
 rows <-createRow(sheet4,rowIndex=1)
 sheetTitle <-createCell(rows, colIndex=5)
-setCellValue(sheetTitle[[1,1]], RunName2)
+setCellValue(sheetTitle[[1,1]], RunName1)
 setCellStyle(sheetTitle[[1,1]], TITLE_STYLE)
 sheetTitle <-createCell(rows, colIndex=7)
-setCellValue(sheetTitle[[1,1]], RunName1)
+setCellValue(sheetTitle[[1,1]], RunName2)
 setCellStyle(sheetTitle[[1,1]], TITLE_STYLE)
 
 addPicture(paste(outfile,"MaxNeeds_Coastal_",RunName2,".jpeg",sep=""),
