@@ -46,14 +46,14 @@ RoundFlag = 0 # 0=No, 1=Yes
 AbundType = 0 # 0=Yes, 1=No
 
 # Set Excel Output file name
-outfile_name = "SRKW_2017_Rnd5_NewRMP; 12.19.17.xlsx"
+outfile_name = "SRKW_2017_Rnd5_ZeroPS; 12.20.17.xlsx"
 
 # Set the paths:
 #   1 = Excel input file
 #   2 = FRAM db for 1st set of model runs (links to Col B in 'R_In_RunID' tab of above file)
 #   3 = FRAM db for 2nd set of model runs (links to Col C in 'R_In_RunID' tab of above file)
 #   4 = Output directory
-paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_12.19.17; 2017Rnd5_NewRMP.xlsx",
+paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_12.20.17; 2017Rnd5_ZeroPS.xlsx",
              "C:\\data\\FRAM\\SRKW\\R_In\\2017 Pre - New RMP\\Pre Season Runs with Round 5.mdb",
              "C:\\data\\FRAM\\SRKW\\R_In\\2017 Pre - New RMP\\Pre Season Runs with Round 5.mdb",
              "C:\\data\\FRAM\\SRKW\\R_Out\\")
@@ -956,6 +956,7 @@ setCellStyle(sheetTitle[[1,1]], TITLE_STYLE)
 addPicture(paste(outfile,"MaxNeeds_Inland_",RunName2,".jpeg",sep=""),
            sheet8, scale = 1, startRow = 2, startColumn = 10)
 
+# Sheet 9; Coastal_Abundance_Detail
 sheet9 <- createSheet(wb, sheetName = "Coastal_Abundance_Detail")
 addDataFrame(Coastal_Abundance, sheet9, startRow = 2, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet9, colIndex = c(1), colWidth = 4)
@@ -974,6 +975,7 @@ sheetTitle <-createCell(rows, colIndex=8)
 setCellValue(sheetTitle[[1,1]], RunName2)
 setCellStyle(sheetTitle[[1,1]], TITLE_STYLE)
 
+# Sheet 10; Coastal_kCal_Detail
 sheet10 <- createSheet(wb, sheetName = "Coastal_kCal_Detail")
 addDataFrame(Coastal_kCal, sheet10, startRow = 2, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet10, colIndex = c(1), colWidth = 4)
@@ -992,6 +994,7 @@ sheetTitle <-createCell(rows, colIndex=8)
 setCellValue(sheetTitle[[1,1]], RunName2)
 setCellStyle(sheetTitle[[1,1]], TITLE_STYLE)
 
+# Sheet 11; Inland_Abundance_Detail
 sheet11 <- createSheet(wb, sheetName = "Inland_Abundance_Detail")
 addDataFrame(Inland_Abundance, sheet11, startRow = 2, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet11, colIndex = c(1), colWidth = 4)
@@ -1010,6 +1013,7 @@ sheetTitle <-createCell(rows, colIndex=8)
 setCellValue(sheetTitle[[1,1]], RunName2)
 setCellStyle(sheetTitle[[1,1]], TITLE_STYLE)
 
+# Sheet 12; Inland_kCal_Detail
 sheet12 <- createSheet(wb, sheetName = "Inland_kCal_Detail")
 addDataFrame(Inland_kCal, sheet12, startRow = 2, colnamesStyle = TABLE_COLNAMES_STYLE)
 setColumnWidth(sheet12, colIndex = c(1), colWidth = 4)
