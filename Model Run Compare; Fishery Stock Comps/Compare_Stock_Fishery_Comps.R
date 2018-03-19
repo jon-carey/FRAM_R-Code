@@ -1,10 +1,10 @@
 ####################################################################################
-# This program will produce a set of figures that compare fishery stock compositions
-# between two specified model runs for desired fishery/timesteps.
+# This program will produce a set of figures that compare the mortality composition
+# by fishery for a given set of stocks.
 #
 # Required Inputs:
 #   1. FRAM database that contains the desired runs (path 1)
-#   2. figlist.csv (provides list of desired fisheries/timesteps; path 2)
+#   2. StkLst.csv (provides list of desired stocks; path 2)
 #   3. Output folder path (path 3)
 ####################################################################################
 
@@ -16,6 +16,9 @@ library(RODBC)
 library(doBy)
 library(ggplot2)
 
+###########################
+# SET REQUIRED PARAMETERS #
+###########################
 # Select RunIDs
 runID <- c(1,53)
 
@@ -24,16 +27,16 @@ runIDnames <- c("Final 2017","March Alt2")
 
 # Identify figures to include in panel, pick any or all of the following:
 # "TotalLanded", "LegalAEQ", "SublegalAEQ", "TotalAEQ"
-figtypes <- c("TotalAEQ")
+figtypes <- c("TotalLanded", "LegalAEQ", "SublegalAEQ", "TotalAEQ")
 
 # Marked/Unmarked Separate (0) or Combined (1)?
 MarkID <- 1
 
 # Ages Separate (0) or Combined (1) or Both (2)?
-AgeID <- 1
+AgeID <- 2
 
 # Time Steps Separate (0) or Combined (1) or Both (2)?
-TimeID <- 1
+TimeID <- 2
 
 # Assess time steps 1-3 (0; non-Puget Sound stocks) or 2-4 (1; Puget Sound stocks)
 TimeRange <- 0
@@ -42,16 +45,11 @@ TimeRange <- 0
 paths = list("C:\\data\\NOF\\2018\\Modeling\\Chinook\\Model Runs\\2018 NOF ChinFRAM.mdb",
              "C:\\data\\NOF\\2018\\Modeling\\Chinook\\Model Runs\\Chin1018-1218\\StkLst.csv",
              "C:\\data\\NOF\\2018\\Modeling\\Chinook\\Model Runs\\Chin1018-1218\\Figs\\")
-
+################################################################################################
 # Set the input file path for the database
 infile = paths[[1]]
 StockList = read.csv(paths[[2]])
 outfile = paths[[3]]
-
-# # Add Mark Status field to StockList
-# for(i in 1:dim(StockList)[1]) {
-#     StockList$MarkStatus[i] <- substr(StockList$StockName[i],1,1)
-# }
 
 # Trim 'U-' and 'M-' off stock names if combining across mark-status
 if(MarkID == 0) {
@@ -73,7 +71,6 @@ if(TimeRange == 0) {
 if(TimeRange == 1) {
     timerange <- c(2:4)
 }
-
 
 # Query Database
 con = odbcConnectAccess(infile)
@@ -259,7 +256,7 @@ i=1
 for(i in 1:length(unique(TotAEQ$Stock))) { 
     stk <- unique(TotAEQ$Stock)[i]
     j=1
-    for(j in 1:length(figtypes)) {
+    for(j in 1:length(figtypes)) { # loop for each mortality type
         ylabel <- figtypes[j]
         if(AgeID == 0 | AgeID == 2) {
             if(TimeID == 0 | TimeID == 2) { # By age and time step
@@ -377,8 +374,8 @@ for(i in 1:length(unique(TotAEQ$Stock))) {
             scale_x_discrete(expand=c(0.025,0)) + #this gets labels closer to axis, gets rid of gap
             theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
             theme(plot.margin=unit(c(2,-2,-4,2),"mm")) +
-            annotate("text", x = 25, y = 6500, label = "Final 2017 River Runsize: 38,880 M, 25,887 UM", size=2) +
-            annotate("text", x = 25, y = 5500, label = "March Alt2 River Runsize: 34,570 M, 34,480 UM", size=2)
+            # annotate("text", x = 25, y = 6500, label = "Final 2017 River Runsize: 38,880 M, 25,887 UM", size=2) +
+            # annotate("text", x = 25, y = 5500, label = "March Alt2 River Runsize: 34,570 M, 34,480 UM", size=2)
         
         if(length(figtypes) == 1) {
             ggsave(paste(outfile,title,".jpeg",sep = ""),p,height = 3.5, width = 7.5)
