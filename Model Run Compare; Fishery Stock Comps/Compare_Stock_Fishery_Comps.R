@@ -20,17 +20,17 @@ library(ggplot2)
 # SET REQUIRED PARAMETERS #
 ###########################
 # Select RunIDs
-runID <- c(1,53)
+runID <- c(1,12)
 
 # Set RunID names
-runIDnames <- c("Final 2017","March Alt2")
+runIDnames <- c("2017","NALF")
 
 # Identify figures to include in panel, pick any or all of the following:
 # "TotalLanded", "LegalAEQ", "SublegalAEQ", "TotalAEQ"
-figtypes <- c("TotalLanded", "LegalAEQ", "SublegalAEQ", "TotalAEQ")
+figtypes <- c("TotalAEQ")
 
 # Marked/Unmarked Separate (0) or Combined (1)?
-MarkID <- 1
+MarkID <- 0
 
 # Ages Separate (0) or Combined (1) or Both (2)?
 AgeID <- 2
@@ -39,7 +39,7 @@ AgeID <- 2
 TimeID <- 2
 
 # Assess time steps 1-3 (0; non-Puget Sound stocks) or 2-4 (1; Puget Sound stocks)
-TimeRange <- 0
+TimeRange <- 1
 
 # Set the paths 
 paths = list("C:\\data\\NOF\\2018\\Modeling\\Chinook\\Model Runs\\2018 NOF ChinFRAM.mdb",
@@ -263,13 +263,13 @@ for(i in 1:length(unique(TotAEQ$Stock))) {
                 k=1
                 for(k in 1:length(unique(TotAEQ_AgeTS$TimeStep))) {
                     title <- paste(stk, " ", ylabel, "; TimeStep ", unique(TotAEQ_AgeTS$TimeStep)[k], sep = "")
-                    figdat <- TotAEQ_AgeTS[TotAEQ_AgeTS$TimeStep == unique(TotAEQ_AgeTS$TimeStep)[k] & TotAEQ_AgeTS$Type == figtypes[j], ]
+                    figdat <- TotAEQ_AgeTS[TotAEQ_AgeTS$Stock == stk & TotAEQ_AgeTS$TimeStep == unique(TotAEQ_AgeTS$TimeStep)[k] & TotAEQ_AgeTS$Type == figtypes[j], ]
                     
                     p <- ggplot(data=figdat, aes(FisheryName,Mortality,fill=Run))
                     p <- p + geom_bar(width=0.5, color="black", alpha=1, position="dodge",
                                       stat="identity")
                     
-                    p <- p + facet_grid(Age ~ .) + 
+                    p <- p + facet_grid(Age ~ ., scales = "free_y") + 
                         theme_bw() + theme_light() + 
                         theme(strip.text.x=element_text(size=15)) +
                         ggtitle(title) +
@@ -290,14 +290,19 @@ for(i in 1:length(unique(TotAEQ$Stock))) {
                 }
             }
             if(TimeID == 1 | TimeID == 2) { # By age over all time steps
-                title <- paste(stk, " ", ylabel, "; TimeSteps 1-3 ", sep = "")
-                figdat <- TotAEQ_Age[TotAEQ_Age$Type == figtypes[j], ]
+                if(TimeRange == 0) {
+                    title <- paste(stk, " ", ylabel, "; TimeSteps 1-3 ", sep = "")
+                }
+                if(TimeRange == 1) {
+                    title <- paste(stk, " ", ylabel, "; TimeSteps 2-4 ", sep = "")
+                }
+                figdat <- TotAEQ_Age[TotAEQ_Age$Stock == stk & TotAEQ_Age$Type == figtypes[j], ]
                 
                 p <- ggplot(data=figdat, aes(FisheryName,Mortality,fill=Run))
                 p <- p + geom_bar(width=0.5, color="black", alpha=1, position="dodge",
                                   stat="identity")
                 
-                p <- p + facet_grid(Age ~ .) + 
+                p <- p + facet_grid(Age ~ ., scales = "free_y") + 
                     theme_bw() + theme_light() + 
                     theme(strip.text.x=element_text(size=15)) +
                     ggtitle(title) +
@@ -320,7 +325,7 @@ for(i in 1:length(unique(TotAEQ$Stock))) {
         if(AgeID == 1 | AgeID == 2) {
             if(TimeID == 0 | TimeID == 2) { # By time step over all ages
                 title <- paste(stk, " ", ylabel, "; All Ages ", sep = "")
-                figdat <- TotAEQ_TS[TotAEQ_TS$Type == figtypes[j], ]
+                figdat <- TotAEQ_TS[TotAEQ_TS$Stock == stk & TotAEQ_TS$Type == figtypes[j], ]
                 for(l in 1:dim(figdat)[1]) {
                     figdat$TimeStep[l] <- paste("Time Step ",figdat$TimeStep[l],sep = "")
                 }
@@ -329,7 +334,7 @@ for(i in 1:length(unique(TotAEQ$Stock))) {
                 p <- p + geom_bar(width=0.5, color="black", alpha=1, position="dodge",
                                   stat="identity")
                 
-                p <- p + facet_grid(TimeStep ~ .) + 
+                p <- p + facet_grid(TimeStep ~ ., scales = "free_y") + 
                     theme_bw() + theme_light() + 
                     theme(strip.text.x=element_text(size=15)) +
                     ggtitle(title) +
@@ -352,13 +357,13 @@ for(i in 1:length(unique(TotAEQ$Stock))) {
     }
     if(TimeID == 1 | TimeID == 2) { # By mortality type over all ages and time steps
         title <- paste(stk, "; All Ages & Time Steps", sep = "")
-        figdat <- TotAEQ
+        figdat <- TotAEQ[TotAEQ$Stock == stk, ]
         
         p <- ggplot(data=figdat, aes(FisheryName,Mortality,fill=Run))
         p <- p + geom_bar(width=0.5, color="black", alpha=1, position="dodge",
                           stat="identity")
         
-        p <- p + facet_grid(Type ~ .) + 
+        p <- p + facet_grid(Type ~ ., scales = "free_y") + 
             theme_bw() + theme_light() + 
             theme(strip.text.x=element_text(size=15)) +
             ggtitle(title) +
@@ -373,7 +378,7 @@ for(i in 1:length(unique(TotAEQ$Stock))) {
             theme(legend.text=element_text(size=10)) +
             scale_x_discrete(expand=c(0.025,0)) + #this gets labels closer to axis, gets rid of gap
             theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
-            theme(plot.margin=unit(c(2,-2,-4,2),"mm")) +
+            theme(plot.margin=unit(c(2,-2,-4,2),"mm")) 
             # annotate("text", x = 25, y = 6500, label = "Final 2017 River Runsize: 38,880 M, 25,887 UM", size=2) +
             # annotate("text", x = 25, y = 5500, label = "March Alt2 River Runsize: 34,570 M, 34,480 UM", size=2)
         
@@ -385,4 +390,7 @@ for(i in 1:length(unique(TotAEQ$Stock))) {
         }
     }
 }
+
+# SummerMorts <- TotAEQ_AgeTS[ ,c(3:6,1,10,7:9)]
+# write.csv(SummerMorts, paste(outfile,"SummerMorts.csv",sep = ""))
 

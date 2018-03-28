@@ -17,12 +17,19 @@ library(doBy)
 library(ggplot2)
 
 # Select RunIDs
-runID <- c(1,12)
+runID <- c(67)
+
+# Set RunID names
+runIDnames <- c("Option 3")
+
+# Identify figures to include in panel, pick any or all of the following:
+# "TotalLanded", "LegalAEQ", "SublegalAEQ", "TotalAEQ"
+figtypes <- c("LegalAEQ", "SublegalAEQ")
 
 # Set the paths 
-paths = list("C:\\data\\NOF\\2018\\Modeling\\Chinook\\Model Runs\\2018 NOF ChinFRAM - Test.mdb",
+paths = list("C:\\data\\NOF\\2018\\Modeling\\Chinook\\Model Runs\\2018 NOF ChinFRAM.mdb",
              "C:\\data\\NOF\\2018\\Modeling\\Chinook\\Model Runs\\AVG-NALF\\figlist.csv",
-             "C:\\data\\NOF\\2018\\Modeling\\Chinook\\Model Runs\\AVG-NALF\\StockCompFigs\\")
+             "C:\\data\\NOF\\2018\\Modeling\\Chinook\\Model Runs\\Chin1318-1518\\StockCompFigs\\")
 
 # Set the input file path for the database
 infile = paths[[1]]
@@ -83,6 +90,9 @@ for(i in 1:dim(MortData)[1]) {
     }
 }
 
+# Calculate TotalLanded
+MortData$TotalLanded <- MortData$LandedCatch + MortData$MSFLandedCatch
+
 #Create "AEQ'd" MortData table
 MortData_AEQ <- MortData
 MortData_AEQ$LandedCatch <- MortData_AEQ$LandedCatch * MortData_AEQ$AEQ
@@ -96,10 +106,18 @@ MortData_AEQ$MSFDropOff <- MortData_AEQ$MSFDropOff * MortData_AEQ$AEQ
 
 MortData_AEQ <- MortData_AEQ[ ,c(2,6,3:5,1,8:11,13:16)]
 MortData_AEQ$LandedAEQ <- MortData_AEQ$LandedCatch + MortData_AEQ$MSFLandedCatch
+MortData_AEQ$LegalAEQ <- rowSums(MortData_AEQ[ ,c(7:8,10:12,14)])
+MortData_AEQ$SublegalAEQ <- rowSums(MortData_AEQ[ ,c(9,13)])
 MortData_AEQ$TotalAEQ <- rowSums(MortData_AEQ[ ,c(7:14)])
 
-# Dataset with TotAEQ
-TotAEQ <- MortData_AEQ[ ,c(1:6,16)]
+# Dataset with TotalLanded, LegalAEQ, SublegalAEQ, TotAEQ
+MortDat <- MortData[order(MortData$RunID,MortData$StockID,MortData$Age,MortData$FisheryID,
+                          MortData$TimeStep),
+                    c(2,6,3:5,1,20)]
+MortDat_AEQ <- MortData_AEQ[order(MortData_AEQ$RunID,MortData_AEQ$StockID,MortData_AEQ$Age,
+                                  MortData_AEQ$FisheryID,MortData_AEQ$TimeStep),
+                            c(1:6,16:18)]
+TotAEQ <- merge(MortDat,MortDat_AEQ)
 
 # Convert to 38 stock format
 TotAEQ$StkNum <- ceiling(TotAEQ$StockID/2)
@@ -114,18 +132,27 @@ for(i in 1:dim(TotAEQ)[1]) {
 # Assign names to RunIDs
 i=1
 for(i in 1:dim(TotAEQ)[1]) {
-    if(TotAEQ$RunID[i] == 1) {
-        TotAEQ$Run[i] <- "Final2017"
-    }
-    if(TotAEQ$RunID[i] == 12) {
-        TotAEQ$Run[i] <- "2018NALF"
+    j=1
+    for(j in 1:length(runID)) {
+        if(TotAEQ$RunID[i] == runID[j]) {
+            TotAEQ$Run[i] <- runIDnames[j]
+        }
     }
 }
 
 # Summarize
-TotAEQ_Summary <- summaryBy(TotalAEQ~BasePeriodID+RunID+Run+StockName+FisheryID+TimeStep,
+TotAEQ_Summary_Wide <- summaryBy(TotalLanded+LegalAEQ+SublegalAEQ+TotalAEQ~BasePeriodID+RunID+Run+StockName+FisheryID+TimeStep,
                              data = TotAEQ, FUN = sum)
-colnames(TotAEQ_Summary)[c(1,7)] <- c("BP","TotalAEQ")
+colnames(TotAEQ_Summary_Wide)[c(1,7:10)] <- c("BP","TotalLanded","LegalAEQ","SublegalAEQ","TotalAEQ")
+
+TotAEQ_Summary <- reshape(TotAEQ_Summary_Wide, varying = c("TotalLanded","LegalAEQ","SublegalAEQ","TotalAEQ"),
+                          times = c("TotalLanded","LegalAEQ","SublegalAEQ","TotalAEQ"),
+                          v.names = "Mortality", idvar = c("BP","RunID","Run","StockName","FisheryID","TimeStep"),
+                          direction = "long")
+colnames(TotAEQ_Summary)[7] <- "Type"
+
+TotAEQ_Summary <- TotAEQ_Summary[TotAEQ_Summary$Type %in% figtypes, ]
+
 
 i=2
 for(i in 2:5) {
@@ -144,11 +171,12 @@ for(i in 2:5) {
             dat_ts <- TotAEQ_Summary[TotAEQ_Summary$FisheryID == fishlist[j] & TotAEQ_Summary$TimeStep == ts, ]
             
             # Chart for total catch by stock
-            p <- ggplot(data=dat_ts, aes(StockName,TotalAEQ,fill=Run))
+            p <- ggplot(data=dat_ts, aes(StockName,Mortality,fill=Run))
             p <- p + geom_bar(width=0.5, color="black", alpha=1, position="dodge",
                               stat="identity")
             
-            p <- p + theme(strip.text.x=element_text(size=15)) +
+            p <- p + facet_grid(Type ~ .) + 
+                theme(strip.text.x=element_text(size=15)) +
                 ggtitle(title) +
                 theme(plot.title=element_text(size=15, face="bold")) +
                 theme(axis.title.x=element_text(size=10),
@@ -168,7 +196,12 @@ for(i in 2:5) {
                 theme(panel.background = element_rect(colour="black",size=1)) + #this adds a border
                 theme(plot.margin=unit(c(2,-2,-4,2),"mm"))
             
-            ggsave(paste(outfile,title,".jpg",sep=""),p,height=5,width=7.5)
+            if(length(figtypes) > 2) {
+                ggsave(paste(outfile,title,".jpg",sep=""),p,height=7.5,width=7.5)
+            }
+            if(length(figtypes) <= 2) {
+                ggsave(paste(outfile,title,".jpg",sep=""),p,height=3.5,width=7.5)
+            }
         }
     }
 }
