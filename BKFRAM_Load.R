@@ -115,10 +115,10 @@ for (i in StartYr:EndYr) {
         year <- RunID[RunID$Year == i, 11]
         bp <- RunID[RunID$Year == i, 12]
     }
-    if(dim(RunID)[2] == 13) { # for RunID table that does contain RunYear field
+    if(dim(RunID)[2] == 14) { # for RunID table that does contain RunYear field
         runID <- RunID[RunID$Year == i, 2]
-        year <- RunID[RunID$Year == i, 12]
-        bp <- RunID[RunID$Year == i, 13]
+        year <- RunID[RunID$Year == i, 13]
+        bp <- RunID[RunID$Year == i, 14]
     }
     
     
@@ -142,7 +142,9 @@ for (i in StartYr:EndYr) {
         BKFRAM <- subset(BKData, YEAR == year)
         BKFRAM$RunID <- c(rep(runID, dim(BKFRAM)[1]))
         BKFRAM <- BKFRAM[ ,c(7,2:6)]
-        BKFRAM <- format(BKFRAM, scientific = FALSE)
+        BKFRAM$TargetEscAge3 <- format(BKFRAM$TargetEscAge3, scientific = FALSE)
+        BKFRAM$TargetEscAge4 <- format(BKFRAM$TargetEscAge4, scientific = FALSE)
+        BKFRAM$TargetEscAge5 <- format(BKFRAM$TargetEscAge5, scientific = FALSE)
         BKFRAM$RunID <- as.integer(BKFRAM$RunID)
         BKFRAM$StockID <- as.integer(BKFRAM$StockID)
         
