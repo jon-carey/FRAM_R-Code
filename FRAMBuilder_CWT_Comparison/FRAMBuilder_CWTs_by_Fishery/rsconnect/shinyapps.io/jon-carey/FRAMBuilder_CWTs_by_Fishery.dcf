@@ -1,0 +1,12 @@
+name: FRAMBuilder_CWTs_by_Fishery
+title: FRAMBuilder_CWTs_by_Fishery
+username:
+account: jon-carey
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 939407
+bundleId: 3746060
+url: https://jon-carey.shinyapps.io/FRAMBuilder_CWTs_by_Fishery/
+when: 1602785425.80804
+asMultiple: FALSE
+asStatic: FALSE

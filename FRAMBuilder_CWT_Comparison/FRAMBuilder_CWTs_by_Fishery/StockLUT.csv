@@ -1,0 +1,34 @@
+StockAbbrev,StockNum,StockTitle
+SAM,1,Nooksack/Samish Fall
+NSF,2,NF Nooksack Spr
+SSF,4,Skagit Summer/Fall
+SKS,6,Skagit Spring
+SKY,7,Snohomish Fall Fing
+SNY,8,Snohomish Fall Year
+STL,9,Stillaguamish Fall Fing
+TUL,10,Tulalip Fall Fing
+MPS,11,Mid PS Fall Fing
+SPS,13,South PS Fall Fing
+SPY,14,South PS Fall Year
+HDF,16,Hood Canal Fall Fing
+HDY,17,Hood Canal Fall Year
+LCO,19,CR OR Hatchery Tule
+LCW,20,CR WA Hatchery Tule
+LRW,21,Lower Columbia R Wild
+SPR,22,CR Bonneville Pool Hatchery
+SUM,23,Columbia R Upriver Summer
+URB,24,Columbia R Upriver Bright
+CWS,25,Cowlitz River Spring
+WSH,26,Willamette River Spring
+SNK,27,Snake River Fall
+NOC,28,Oregon North Coast Fall
+RBT,29,WCVI Total Fall
+FRL,30,Fraser River Late
+FRE,31,Fraser River Early
+LGS,32,Lower Georgia Strait
+LCN,34,Lower Columbia Naturals
+SAC,35,Central Valley Fall
+WNC,36,WA North Coast Fall
+WPA,37,Willapa Bay
+HOK,38,Hoko River
+MOC,39,Mid Oregon Coast Fall
