@@ -16,9 +16,9 @@
 #                              specified database, option to specify bpID
 # 7. ZeroPS_SRKW: zeros out all PS fishery and CNR inputs (with exception of 
 #                 Hood Canal sport & net and 13A net), updates remaining ISBM
-#                 fishery flags to scalers. Requires a single runID.
+#                 fishery flags to scalers. Can accomodate multiple runIDs.
 # 8. ZeroPS_SRKW: zeros out all PS fishery and CNR inputs, updates remaining 
-#                 ISBM fishery flags to scalers. Requires a single runID.
+#                 ISBM fishery flags to scalers. Can accomodate multiple runIDs.
 #
 #
 #----------------------------------------------------------------------------#
@@ -285,18 +285,20 @@ pull_TerminalFisheryFlag <- function(db_path, bpID) {
 ZeroPS_SRKW <- function(runID, db_path) {
   con = odbcConnectAccess(db_path)
   
+  runID_string <- toString(sprintf("%s", runID))
+  
   # query to zero out PS fisheries (with exception of 'A 12 Sport', 'NT HC Net', 'Tr HC Net', 'Tr HC Net', and 'Tr 13A Net')
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 2, FisheryScalers.Quota = 0 ",
-                 "WHERE (((FisheryScalers.FisheryID)>=36 And (FisheryScalers.FisheryID) Not In (64,65,66,70,71)) AND ((FisheryScalers.RunID)=",runID,")) ",
-                 "OR (((FisheryScalers.FisheryID)=17) AND ((FisheryScalers.RunID)=",runID,") AND ((FisheryScalers.TimeStep) In (1,4)));"))
+                 "WHERE (((FisheryScalers.FisheryID)>=36 And (FisheryScalers.FisheryID) Not In (64,65,66,70,71)) AND ((FisheryScalers.RunID) In (",runID_string,"))) ",
+                 "OR (((FisheryScalers.FisheryID)=17) AND ((FisheryScalers.RunID) In (",runID_string,")) AND ((FisheryScalers.TimeStep) In (1,4)));"))
   
   # query to update remaining ISBM flags from 2 to 1
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 1 ",
-                 "WHERE (((FisheryScalers.RunID)=",runID,") ",
+                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
                  "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,64,65,66,70,71)) ",
                  "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=2));"))
   
@@ -304,7 +306,7 @@ ZeroPS_SRKW <- function(runID, db_path) {
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 7 ",
-                 "WHERE (((FisheryScalers.RunID)=",runID,") ",
+                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
                  "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,64,65,66,70,71)) ",
                  "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=8));"))
   
@@ -312,7 +314,7 @@ ZeroPS_SRKW <- function(runID, db_path) {
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 17 ",
-                 "WHERE (((FisheryScalers.RunID)=",runID,") ",
+                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
                  "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,64,65,66,70,71)) ",
                  "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=28));"))
   
@@ -320,7 +322,7 @@ ZeroPS_SRKW <- function(runID, db_path) {
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
-                 "WHERE (((NonRetention.RunID)=",runID,") AND ((NonRetention.FisheryID)>=36 And (NonRetention.FisheryID) Not In (64,65,66,70,71)));"))
+                 "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36 And (NonRetention.FisheryID) Not In (64,65,66,70,71)));"))
   
   close(con)
 }
@@ -333,18 +335,20 @@ ZeroPS_SRKW <- function(runID, db_path) {
 ZeroPS <- function(runID, db_path) {
   con = odbcConnectAccess(db_path)
   
+  runID_string <- toString(sprintf("%s", runID))
+  
   # query to zero out all PS fisheries
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 2, FisheryScalers.Quota = 0 ",
-                 "WHERE ((FisheryScalers.FisheryID)>=36 AND ((FisheryScalers.RunID)=",runID,")) ",
-                 "OR (((FisheryScalers.FisheryID)=17) AND ((FisheryScalers.RunID)=",runID,") AND ((FisheryScalers.TimeStep) In (1,4)));"))
+                 "WHERE ((FisheryScalers.FisheryID)>=36 AND ((FisheryScalers.RunID) In (",runID_string,"))) ",
+                 "OR (((FisheryScalers.FisheryID)=17) AND ((FisheryScalers.RunID) In (",runID_string,")) AND ((FisheryScalers.TimeStep) In (1,4)));"))
   
   # query to update remaining ISBM flags from 2 to 1
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 1 ",
-                 "WHERE (((FisheryScalers.RunID)=",runID,") ",
+                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
                  "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)) ",
                  "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=2));"))
   
@@ -352,7 +356,7 @@ ZeroPS <- function(runID, db_path) {
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 7 ",
-                 "WHERE (((FisheryScalers.RunID)=",runID,") ",
+                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
                  "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)) ",
                  "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=8));"))
   
@@ -360,7 +364,7 @@ ZeroPS <- function(runID, db_path) {
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 17 ",
-                 "WHERE (((FisheryScalers.RunID)=",runID,") ",
+                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
                  "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)) ",
                  "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=28));"))
   
@@ -368,7 +372,7 @@ ZeroPS <- function(runID, db_path) {
   sqlQuery(con, as.is = TRUE,
            paste(sep = '',
                  "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
-                 "WHERE (((NonRetention.RunID)=",runID,") AND ((NonRetention.FisheryID)>=36));"))
+                 "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36));"))
   
   close(con)
 }
