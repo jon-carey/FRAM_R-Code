@@ -1,26 +1,50 @@
 ##############################################################################
-# Series of functions to update FRAM runs for various zero fishing scenarios #
+#######  Collection of various functions for use with a FRAM database  #######
 ##############################################################################
 #
-# 1. pull_AEQ: pulls AEQ table from a specified database, 
-#              option to specify bpID
-# 2. pull_Cohort: pulls Cohort table from a specified database, 
-#                 option to specify runID, stock, age, timestep
-# 3. pull_Escapement: pulls Escapement table from a specified database, 
-#                     option to specify runID, stock, age, timestep
-# 4. pull_Mortality: pulls Mortality table from a specified database, 
-#                    option to specify runID, stock, age, fishery, timestep
-# 5. pull_RunID: pulls RunID table from a specified database, 
-#                option to specify runID, stock, age, timestep
-# 6. pull_TerminalFisheryFlag: pulls TerminalFisheryFlag table from a 
-#                              specified database, option to specify bpID
-# 7. ZeroPS_SRKW: zeros out all PS fishery and CNR inputs (with exception of 
-#                 Hood Canal sport & net and 13A net), updates remaining ISBM
-#                 fishery flags to scalers. Can accomodate multiple runIDs.
-# 8. ZeroPS_SRKW: zeros out all PS fishery and CNR inputs, updates remaining 
-#                 ISBM fishery flags to scalers. Can accomodate multiple runIDs.
+# 1. pull_AEQ(db_path, bpID): 
+#       pulls AEQ table from a specified database, 
+#       option to specify bpID
 #
+# 2. pull_Cohort(db_path, runID, stock, age, timestep): 
+#       pulls Cohort table from a specified database, 
+#       option to specify runID, stock, age, timestep
 #
+# 3. pull_Escapement(db_path, runID, stock, age, timestep): 
+#       pulls Escapement table from a specified database, 
+#       option to specify runID, stock, age, timestep
+#
+# 4. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
+#       pulls Mortality table from a specified database, 
+#       option to specify runID, stock, age, fishery, timestep
+#
+# 5. pull_RunID(db_path, runID): 
+#       pulls RunID table from a specified database, 
+#       option to specify runID, stock, age, timestep
+#
+# 6. pull_TerminalFisheryFlag(db_path, bpID): 
+#       pulls TerminalFisheryFlag table from a 
+#       specified database, option to specify bpID
+#
+# 7. ZeroPS_SRKW(db_path, runID): 
+#       zeros out all PS fishery and CNR inputs (with exception of 
+#       Hood Canal sport & net and 13A net), updates remaining ISBM
+#       fishery flags to scalers. Can accomodate multiple runIDs.
+#
+# 8. ZeroPS_SRKW(db_path, runID): 
+#       zeros out all PS fishery and CNR inputs, updates remaining 
+#       ISBM fishery flags to scalers. Can accomodate multiple runIDs.
+#
+# 9. SRFI(db_path, runID, SRFI_BP_ER, outfile): 
+#       calculates SRFI values for a supplied list of RunIDs; requires a
+#       SRFI_BP_ER to be supplied, will output a csv to outfile
+#
+##############################################################################
+
+# required packages
+library(RODBC)
+library(doBy)
+
 #----------------------------------------------------------------------------#
 # Function to pull AEQ table from a FRAM database
 pull_AEQ <- function(db_path, bpID) {
@@ -282,7 +306,7 @@ pull_TerminalFisheryFlag <- function(db_path, bpID) {
 #----------------------------------------------------------------------------#
 # Function to update a FRAM run for SRKW "Zero PS"
 
-ZeroPS_SRKW <- function(runID, db_path) {
+ZeroPS_SRKW <- function(db_path, runID) {
   con = odbcConnectAccess(db_path)
   
   runID_string <- toString(sprintf("%s", runID))
@@ -332,7 +356,7 @@ ZeroPS_SRKW <- function(runID, db_path) {
 #----------------------------------------------------------------------------#
 # Function to update a FRAM run for "Zero PS"
 
-ZeroPS <- function(runID, db_path) {
+ZeroPS <- function(db_path, runID) {
   con = odbcConnectAccess(db_path)
   
   runID_string <- toString(sprintf("%s", runID))
@@ -377,3 +401,59 @@ ZeroPS <- function(runID, db_path) {
   close(con)
 }
 #----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to calculate SRFI
+# Requires:
+
+SRFI <- function(db_path, runID, SRFI_BP_ER, outfile) {
+  SRFI_log <- data.frame(matrix(ncol = 3, nrow = length(runID)))
+  colnames(SRFI_log) <- c("RunID", "RunName", "SRFI")
+
+  for(j in 1:length(runID)) {
+    run_id <- runID[j]
+
+    # pull necessary data from FRAM database
+    Esc <- pull_Escapement(db_path, run_id, stock = 54)
+    Mort <- pull_Mortality(db_path, run_id, stock = 54)
+    RunID <- pull_RunID(db_path)
+    bpID <- RunID[RunID$RunID == run_id, 6]
+    TermFlag <- pull_TerminalFisheryFlag(db_path, bpID)
+    AEQ <- pull_AEQ(db_path, bpID)
+    AEQ <- AEQ[AEQ$StockID == 54, ]
+
+    # add terminal flag to mort table
+    Mort <- merge(Mort, TermFlag[ ,c(2:4)], all.x = TRUE)
+    Mort$TerminalFlag[is.na(Mort$TerminalFlag)] <- 0
+
+    # add AEQ
+    Mort <- merge(Mort, AEQ[ ,c(2:5)], all.x = TRUE)
+
+    # if terminal, set AEQ to 1
+    i=1
+    for(i in 1:dim(Mort)[1]) {
+      if(Mort$TerminalFlag[i] == 1) {
+        Mort$AEQ[i] <- 1
+      }
+    }
+
+    # sum total mort and AEQ mort
+    Mort$Tot_Mort <- rowSums(Mort[ ,c(7:10,12:15)])
+    Mort$AEQ_Mort <- Mort$Tot_Mort * Mort$AEQ
+
+    Age_3_4_Mort <- sum(Mort[Mort$Age %in% c(3,4) & Mort$TimeStep %in% c(1:3), 20])
+    Tot_AEQ_Mort <- sum(Mort[ , 20])
+    Escapement <- sum(Esc$Escapement)
+    SRFI_ER <- Age_3_4_Mort / (Tot_AEQ_Mort + Escapement)
+
+    SRFI <- round(SRFI_ER / SRFI_BP_ER,4)
+
+    SRFI_log_j <- c(run_id, RunID[RunID$RunID == run_id, 4], SRFI)
+
+    SRFI_log[j, ] <- SRFI_log_j
+  }
+
+  write.csv(SRFI_log, outfile)
+  return(SRFI_log[order(SRFI_log$RunID), ])
+}
