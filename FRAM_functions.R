@@ -35,7 +35,7 @@
 #       zeros out all PS fishery and CNR inputs, updates remaining 
 #       ISBM fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 9. SRFI(db_path, runID, SRFI_BP_ER, outfile): 
+# 9. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
 #       calculates SRFI values for a supplied list of RunIDs; requires a
 #       SRFI_BP_ER to be supplied, will output a csv to outfile
 #
@@ -405,9 +405,9 @@ ZeroPS <- function(db_path, runID) {
 
 #----------------------------------------------------------------------------#
 # Function to calculate SRFI
-# Requires:
+# Requires: db_path, series of RunIDs, SRFI_BP_ER, and an outfile path
 
-SRFI <- function(db_path, runID, SRFI_BP_ER, outfile) {
+calc_SRFI <- function(db_path, runID, SRFI_BP_ER, outfile) {
   SRFI_log <- data.frame(matrix(ncol = 3, nrow = length(runID)))
   colnames(SRFI_log) <- c("RunID", "RunName", "SRFI")
 
