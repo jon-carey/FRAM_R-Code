@@ -1,0 +1,715 @@
+---
+title: "Evaluation of post-season Chinook FRAM performance"
+author: " "
+date: "Some date, 2021"
+output: 
+  html_document: 
+    toc: true
+    toc_depth: 4
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls(all=TRUE))
+
+library(readxl)
+library(tidyr)
+library(doBy)
+library(forcats)
+library(ctctools)
+library(ggplot2)
+library(tinytex)
+library(knitr)
+library(kableExtra)
+
+# Load FRAM functions
+source("C:\\Users\\jonathan.carey\\Documents\\GitHub\\FRAM_R-Code\\FRAM_functions.R")
+
+StkList <- c("LRH","CWF","LRW","SPR","SUM","URB","WSH","LYF","SRH","RBT","QUE","HOK","ELK")
+start_cy <- 1999
+end_cy <- 2018
+start_by <- 1994
+end_by <- 2013
+
+Dir <- "C:\\Users\\jonathan.carey\\Documents\\FRAM\\Calibration_Validation\\Chinook\\2020\\Final Package 7.1\\"
+stk_info <- read.csv(paste(Dir,"FRAM_ERA_Compare\\stk_info.csv", sep=""))
+fish_info <- read.csv(paste(Dir,"FRAM_ERA_Compare\\fish_info.csv", sep=""))
+BP_tagcodes_FRAM <- read.csv(paste(Dir,"FRAM_ERA_Compare\\FRAM_BP_TagCodes.csv", sep=""))
+MDT_path <-paste(Dir,"FRAM_ERA_Compare\\2020ERA_MortalityDistributionTables_V6_4age.xlsx", sep="")
+FRAM_path <- paste(Dir,"Valid2020_Round_7.1.mdb", sep="")
+
+OUT_folder <- paste(Dir,"FRAM_ERA_Compare\\2020_ERA_OUT\\",sep = "")
+```
+
+## To-do
+* add stocks?
+* add funcionality for 2:1 ERA:FRAM stocks?
+* make mat-rate and AEQ figures taller?
+* fill in text
+
+## Introduction
+
+As part of the annual preseason planning process for setting salmon fisheries in the marine waters of Washington and Oregon, the Pacific Fishery Management Council (PFMC) and Washington comanagers use the Fishery Regulation Assessment Model (FRAM) to estimate impacts of proposed fisheries on various coho and Chinook stocks.  For Chinook specifically, FRAM is used to help plan PFMC ocean fisheries that occur north of Cape Falcon, OR as well as those that occur in the Strait of Juan de Fuca and Puget Sound.  The FRAM is a deterministic single-pool model where each model run occurs over a single year and produced fishery impacts by stock for specific time periods and age classes.  For details on model structure and computational processes, see `REFERENCE TO FRAM DOCUMENTATION SITE?`.
+
+The FRAM is rooted in a set of base period data derived through species-specific cohort analysis procedures that are based primarily on coded-wire tag (CWT) recoveries.  Key Chinook base data include stock-age-fishery-time period specific base period exploitation rates, base period cohort sizes, maturation rates, adult equivalent (AEQ) rates, and growth function parameters.  The original set of base period data for Chinook was derived from CWTs released during the 1974 - 1979 brood years and shared many of the same CWT tag groups that were used to represent exploitation rate indicator stocks and model stocks of the Pacific Salmon Commission (PSC) Chinook model that is used for fishery management in accordance with the Pacific Salmon Treaty (PST).  In recent years, a considerable amount of effort has been devoted to contemporizing and continually refining the Chinook FRAM base period data set, which is now derived from CWTs released during the 2005 - 2008 brood years.  The most current base period calibration, referred to as "Round 7.1" was created in June 2021 and was produced along with a time series of postseason model runs (referred to as validation runs) ranging from 1992 - 2018.
+
+Utilizing these more contemporary base period years means that there is no longer overlap in the CWT tag groups used to represent many of the model stocks in both Chinook FRAM and the PSC Chinook model.  However, there is still considerable overlap between the tag codes used to represent many Chinook FRAM stocks and the brood year 2005 - 2008 tag codes used for exploitation rate indicator stocks as part of the Chinook Technical Committee's (CTC) annual Exploitation Rate Analysis (ERA).  The purpose of this assessment is to provide an evaluation of FRAM postseason performance by leveraging independently derived metrics from the CTC's annual ERA.    
+
+### Similarities and differences between FRAM and ERA
+* both rooted in standard CWT-based cohort analysis
+* different IM rates
+* given FRAM's reliance on a base period and the assumption of static parameters, it might be better to compare averages over time
+
+## Methods
+
+### Exploitation Rates
+
+#### ERA
+Calendar year exploitation rates are calculated as part of the CTC's ERA and can be obtained from AEQ total mortality distribution tables included as appendices to the annual "Exploitation Rate Analysis and Model Calibration" reports `(CTC 2021)`.  
+
+#### FRAM
+
+### Maturation Rates
+
+#### ERA
+
+#### FRAM
+
+Unlike in the ERA, where maturation rates are calculated independently for each seperate brood year, FRAM maturation rates are considered to be static and are an output of the base period calibration.
+
+Each year the Chinook Technical Committee (CTC) of the Pacific Salmon Commission (PSC) conducts an "Exploitation Rate Analysis," which involves a cohort analysis that reconstructs the cohort size and history for a given set of exploitation rate indicator stocks and brood years using CWT release and recovery data. 
+
+FRAM exploitation rates were based on postseason validation runs conducted in June 2021 and based on the latest version of the Chinook FRAM base period calibration, referred to as 'round 7.1'.  For this analysis only preterminal (ocean) exploitation rates were evaluated, as FRAM does not account for terminal fishery impacts for many stocks.  FRAM ocean exploitatoin rates were calculated as: 
+
+$$ER = \sum_{f}Catch_{s,a,f,t}$$
+
+```{r Summarize ERA ERs, warning=FALSE, include=FALSE}
+# Summarize ERA ERs
+
+# empty data frame
+ERA_ER_Region <- data.frame(Stock = as.character(), Year = as.integer(), ERA_Include = as.integer(), 
+                            Region = as.character(), ER_ERA = as.numeric())
+
+for(i in 1:length(StkList)) {
+  TM_dat <- read_excel(path = MDT_path, sheet = paste(StkList[i], "total mort"), range = "A6:AG46", 
+                        col_types = c("numeric", rep("text",2), rep("numeric",30)))
+  TM_dat$Stock <- StkList[i]
+  TM_dat$ERA_Include <- 0
+  TM_dat <- TM_dat[TM_dat$Year >= start_cy & TM_dat$Year <=end_cy, ]
+  # TM_dat[ ,c(4:33)] <- as.numeric(TM_dat[ ,c(4:33)])
+  
+  for(j in 1:dim(TM_dat)[1]) {
+    if(is.na(TM_dat$Ages[j])) {
+      TM_dat$ERA_Include[j] <- 0
+    } else {
+      if(nchar(TM_dat$Ages[j]) > 4) {
+        if(as.numeric(TM_dat$CWT[j]) >= 105) {
+          TM_dat$ERA_Include[j] <- 1
+        }
+      }
+    }
+  }
+  
+  TM_dat$SEAK <-round(rowSums(TM_dat[ ,c(4:6)])/100,3)
+  TM_dat$NBC <- round(rowSums(TM_dat[ ,c(7:8,11:13)])/100,3)
+  TM_dat$SBC <- round(rowSums(TM_dat[ ,c(9:10,14:16)])/100,3)
+  TM_dat$SUS <- round(rowSums(TM_dat[ ,c(17:23)])/100,3)
+  
+  TM_dat <- TM_dat[ ,c(34,1,35:39)]
+  TM_dat_long <- pivot_longer(TM_dat, cols = 4:7, names_to = "Region", values_to = "ER_ERA")
+  ERA_ER_Region <- rbind(ERA_ER_Region, TM_dat_long)
+}
+
+ERA_ER_Ocean <- summaryBy(ER_ERA~Stock+Year+ERA_Include, data = as.data.frame(ERA_ER_Region), 
+                          FUN = sum, keep.names = TRUE)
+
+rm(TM_dat, TM_dat_long, i, j)
+   
+```
+
+
+
+```{r Summarize FRAM ERs, warning=FALSE, include=FALSE}
+#Summarize FRAM ERs
+
+# empty data frame
+FRAM_ER_Region <- data.frame(Stock = as.character(), Year = as.integer(), Region = as.character(), 
+                             ER_FRAM = as.numeric())
+
+#Pull RunID info
+RunID <- pull_RunID(FRAM_path)
+RunID <- RunID[RunID$RunYear >= start_cy & RunID$RunYear <= end_cy, c(2,6,11)]
+bpID <- unique(RunID$BasePeriodID)
+
+for(i in 1:length(StkList)) {
+  stk <- StkList[i]
+  stk_id <- stk_info[stk_info$Stock_ERA == StkList[i], 4] # using marked stock b/c ERA is run on marked codes and doesn't account for MSF
+  
+  #Pull necessary data from FRAM database
+  Esc <- pull_Escapement(FRAM_path, RunID$RunID, stk_id, timestep = c(1:3)) 
+  Mort <- pull_Mortality(FRAM_path, RunID$RunID, stk_id, timestep = c(1:3))
+  TermFlag <- pull_TerminalFisheryFlag(FRAM_path, bpID)
+  TermFlag <- TermFlag[TermFlag$TimeStep < 4, ]
+  AEQ <- pull_AEQ(FRAM_path, bpID)
+  AEQ <- AEQ[AEQ$StockID == stk_id & AEQ$TimeStep < 4, ]
+  
+  # add terminal flag to mort table
+  Mort <- merge(Mort, TermFlag[ ,c(2:4)], all.x = TRUE)
+  Mort$TerminalFlag[is.na(Mort$TerminalFlag)] <- 0
+  
+  # add AEQ
+  Mort <- merge(Mort, AEQ[ ,c(2:5)], all.x = TRUE)
+  
+  # if terminal, set AEQ to 1
+  i=1
+  for(i in 1:dim(Mort)[1]) {
+    if(Mort$TerminalFlag[i] == 1) {
+      Mort$AEQ[i] <- 1
+    }
+  }
+  
+  # sum total mort and AEQ mort
+  Mort$Tot_Mort <- rowSums(Mort[ ,c(7:10,12:15)])
+  Mort$AEQ_Mort <- Mort$Tot_Mort * Mort$AEQ
+  
+  # add fishery info and run year, summarize AEQ morts by year
+  Mort <- merge(Mort, fish_info[ ,c(1,4)], all.x = TRUE)
+  Mort <- merge(Mort, RunID[ ,c(1,3)], all.x = TRUE)
+  AEQ_yr <- summaryBy(AEQ_Mort~RunYear, data = Mort, FUN = sum, keep.names = TRUE)
+  FRAM_ER_stk <- summaryBy(AEQ_Mort~RunYear+Region, data = Mort, FUN = sum, keep.names = TRUE)
+  
+  # add run year to escapement table and summarize by year
+  Esc_yr <- merge(Esc, RunID[ ,c(1,3)], all.x = TRUE)
+  Esc_yr <- summaryBy(Escapement~RunYear, data = Esc_yr, FUN = sum, keep.names = TRUE)
+  
+  # combine AEQ morts and escapements to get abundance
+  Abund_yr <- merge(AEQ_yr, Esc_yr)
+  Abund_yr$Abundance <- Abund_yr$AEQ_Mort + Abund_yr$Escapement
+  
+  FRAM_ER_stk <- merge(FRAM_ER_stk, Abund_yr[ ,c(1,4)], all.x = TRUE)
+  FRAM_ER_stk$ER_FRAM <- round(FRAM_ER_stk$AEQ_Mort / FRAM_ER_stk$Abundance,3)
+  FRAM_ER_stk$Stock <- stk
+  FRAM_ER_stk <- FRAM_ER_stk[ ,c(6,1,2,5)]
+  colnames(FRAM_ER_stk)[2] <- "Year"
+  
+  FRAM_ER_Region <- rbind(FRAM_ER_Region, FRAM_ER_stk)
+}
+
+FRAM_ER_Region <- FRAM_ER_Region[!(FRAM_ER_Region$Region == "Term"), ]
+FRAM_ER_Ocean <- summaryBy(ER_FRAM~Stock+Year, data = FRAM_ER_Region, FUN = sum, keep.names = TRUE)
+
+rm(Abund_yr, AEQ, AEQ_yr, Esc, Esc_yr, FRAM_ER_stk, Mort, RunID, TermFlag, i, stk, stk_id)
+```
+
+
+
+```{r Extract Maturation Rates and AEQs, warning=FALSE, include=FALSE}
+#---------- Get FRAM maturation rates ----------#
+MatRate_FRAM <- pull_MaturationRate(FRAM_path)
+MatRate_FRAM <- MatRate_FRAM[!(MatRate_FRAM$MaturationRate == 0), ]
+MatRate_FRAM <- MatRate_FRAM[!(MatRate_FRAM$TimeStep == 4), ]
+
+
+#---------- Get FRAM AEQs ----------#
+AEQ_FRAM <- pull_AEQ(FRAM_path)
+AEQ_FRAM <- AEQ_FRAM[AEQ_FRAM$TimeStep == 3, ]
+
+
+#---------- Get ERA maturation rates and AEQs from .OUT files ----------#
+# empty data frame
+mat_aeq <- data.frame(Stock = as.character(), BroodYear = as.integer(), Age = as.integer(), 
+                      MatRate = as.numeric(), AEQ = as.numeric())
+BP_tagcodes_ERA <- data.frame(Stock = as.character(), BroodYear = as.integer(), TagCode = as.character(), ERA = as.integer())
+
+for(i in 1:length(StkList)) {
+  stk <- StkList[i]
+  
+  for(j in start_by:end_by) {
+    if(j < 2000) {
+      byr <- substr(j,3,4)
+    } else {byr <- paste("1", substr(j,3,4), sep = "")}
+    
+    OUT_path <- paste(OUT_folder,stk,byr,"CBY.OUT",sep = "")
+    
+    OUT_dat <- tryCatch( # catches error (if file doesn't exist) and returns NA
+      {
+        readLines(OUT_path)
+      },
+      error=function(cond) {
+        return(NA)
+      },
+      warning=function(cond) {
+        return(NA)
+      },
+      finally={
+      }
+    )
+    
+    if(is.na(OUT_dat)[1] == FALSE) {
+      for(k in 1:length(OUT_dat)) {
+        if(OUT_dat[k] == "FISHERY SPECIFIC EXPLOITATION RATES (LESS NATURAL MORTALITY)<TERMINAL AREAS=PROPORTION OF TERMINAL RUN ONLY>") {
+          mat_ref <- k
+          aeq_ref <- k
+          if(stk %in% c("SRH","QUE","HOK")) {
+            mat_ref <- k+1
+            aeq_ref <- k+2
+          }
+        }
+        if(OUT_dat[k] == "FOR THE FOLLOWING TAG CODES:") {
+          code_ref1 <- k
+        }
+        if(substr(OUT_dat[k],1,14) == "TOTAL RELEASE=") {
+          code_ref2 <- k
+        }
+      }
+      
+      # extract mat rates
+      mat_5 <- as.numeric(substr(OUT_dat[mat_ref+2], nchar(OUT_dat[mat_ref+2])-5, nchar(OUT_dat[mat_ref+2])))
+      mat_4 <- as.numeric(substr(OUT_dat[mat_ref+3], nchar(OUT_dat[mat_ref+3])-6, nchar(OUT_dat[mat_ref+3])))
+      mat_3 <- as.numeric(substr(OUT_dat[mat_ref+4], nchar(OUT_dat[mat_ref+4])-6, nchar(OUT_dat[mat_ref+4])))
+      mat_2 <- as.numeric(substr(OUT_dat[mat_ref+5], nchar(OUT_dat[mat_ref+5])-6, nchar(OUT_dat[mat_ref+5])))
+      
+      # extract AEQs
+      aeq_5 <- as.numeric(substr(OUT_dat[aeq_ref+8], nchar(OUT_dat[aeq_ref+8])-5, nchar(OUT_dat[aeq_ref+8])))
+      aeq_4 <- as.numeric(substr(OUT_dat[aeq_ref+9], nchar(OUT_dat[aeq_ref+9])-5, nchar(OUT_dat[aeq_ref+9])))
+      aeq_3 <- as.numeric(substr(OUT_dat[aeq_ref+10], nchar(OUT_dat[aeq_ref+10])-5, nchar(OUT_dat[aeq_ref+10])))
+      aeq_2 <- as.numeric(substr(OUT_dat[aeq_ref+11], nchar(OUT_dat[aeq_ref+11])-5, nchar(OUT_dat[aeq_ref+11])))
+      
+      mat_aeq_dat <- data.frame(Stock = rep(stk,4), BroodYear = rep(j,4), Age = c(2:5),
+                                MatRate = c(mat_2,mat_3,mat_4,mat_5), 
+                                AEQ = c(aeq_2, aeq_3, aeq_4, aeq_5))
+      mat_aeq <- rbind(mat_aeq, mat_aeq_dat)
+      
+      if(j %in% c(2005:2008)) {
+        n <- code_ref2 - code_ref1 - 3
+        for(l in 1:n) {
+          code_n <- paste(substr(OUT_dat[code_ref1+l+1],7,8),substr(OUT_dat[code_ref1+l+1],10,11),
+                          substr(OUT_dat[code_ref1+l+1],13,14),sep = "")
+          BP_tagcodes_ERA_n <- data.frame(Stock = stk, BroodYear = j, TagCode = code_n, ERA = 1)
+          BP_tagcodes_ERA <- rbind(BP_tagcodes_ERA, BP_tagcodes_ERA_n)
+        }
+      }
+    }
+  }
+}
+
+BP_tagcodes_FRAM$TagCode <- sprintf("%06d", BP_tagcodes_FRAM$TagCode)
+BP_tagcodes <- merge(BP_tagcodes_ERA, BP_tagcodes_FRAM, all = TRUE)
+BP_tagcodes$ERA[BP_tagcodes$ERA == 1] <- "x"
+BP_tagcodes$FRAM[BP_tagcodes$FRAM == 1] <- "x"
+BP_tagcodes$ERA[is.na(BP_tagcodes$ERA)] <- ""
+BP_tagcodes$FRAM[is.na(BP_tagcodes$FRAM)] <- ""
+
+rm(mat_aeq_dat, aeq_2, aeq_3, aeq_4, aeq_5, aeq_ref, byr, i, j, k, l, n, mat_2, mat_3, mat_4, mat_5, mat_ref, 
+   OUT_dat, OUT_path, stk, BP_tagcodes_ERA_n, code_n, code_ref1, code_ref2, BP_tagcodes_ERA, BP_tagcodes_FRAM)
+```
+
+
+
+```{r Generate Plots, warning=FALSE, include=FALSE}
+# merge ERA and FRAM ER data frames
+ER_Region <- merge(ERA_ER_Region, FRAM_ER_Region)
+ER_Region_long <- pivot_longer(ER_Region, cols = 5:6, names_to = "Source", values_to = "ER")
+ER_Region_long$Period <- ""
+for(i in 1:dim(ER_Region_long)[1]) {
+  if(ER_Region_long$Year[i] < 2009) {ER_Region_long$Period[i] <- "1999-2008"}
+  else {ER_Region_long$Period[i] <- "2009-2018"}
+}
+
+ER_Ocean <- merge(ERA_ER_Ocean, FRAM_ER_Ocean)
+ER_Ocean_long <- pivot_longer(ER_Ocean, cols = 4:5, names_to = "Source", values_to = "ER")
+ER_Ocean_long$Period <- ""
+for(i in 1:dim(ER_Ocean_long)[1]) {
+  if(ER_Ocean_long$Year[i] < 2009) {ER_Ocean_long$Period[i] <- "1999-2008"}
+  else {ER_Ocean_long$Period[i] <- "2009-2018"}
+}
+
+
+
+#---------- Ocean ER box plots - all stocks----------#
+plots_OceanER_Box <- list()
+
+plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=Stock, y=ER, color = Source, fill=Source)) +
+  geom_boxplot(position=position_dodge(0.85), alpha = 0.75) +
+  # facet_wrap(~Period, ncol = 1) +
+  aes(x = fct_inorder(Stock), fill = fct_inorder(Source)) +
+  scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
+  scale_color_manual(values = c("black","black")) + 
+  scale_x_discrete(limits = StkList) +
+  theme_bw() +
+  guides(color=FALSE) +
+  theme(legend.position="bottom") +
+  xlab("") + 
+  ylab("Exploitation Rate") +
+  labs(title = "Ocean Exploitation Rates")
+
+
+
+#---------- Ocean ER line graphs ----------#
+plots_OceanER_Line <- list()
+
+for(i in 1:length(StkList)) {
+  ER_Ocean_stk <- ER_Ocean_long[ER_Ocean_long$Stock == StkList[i], ]
+  # ER_Ocean_stk <- ER_Ocean_stk[ER_Ocean_stk$ERA_Include == 1, ]
+  
+  plots_OceanER_Line[[length(plots_OceanER_Line)+1]] <- ggplot(ER_Ocean_stk, aes(x=Year, y=ER, color=Source, fill=Source, shape=Source)) +
+    geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
+    theme_bw() + # make the panel background white
+    scale_shape_manual(name="", breaks=c("ER_ERA","ER_FRAM"),
+                       values=c("ER_ERA"=23,"ER_FRAM"=21)) +
+    scale_color_manual(name="", breaks=c("ER_ERA","ER_FRAM"),
+                       values=c("ER_ERA"="#66CDAA", "ER_FRAM"="#56B4E9")) +
+    scale_fill_manual(name="", breaks=c("ER_ERA","ER_FRAM"),
+                      values=c("ER_ERA"="#66CDAA", "ER_FRAM"="#56B4E9")) +
+    theme(legend.position="bottom") +
+    labs(title=paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Ocean Exploitation Rates", sep = ""),
+         y="Ocean Exploitation Rate")
+}
+
+
+
+#---------- Regional ER box plots ----------#
+plots_RegER_Box <- list()
+
+for(i in 1:length(StkList)) {
+  ER_Region_stk <- ER_Region_long[ER_Region_long$Stock == StkList[i], ]
+  ER_Region_stk <- ER_Region_stk[ER_Region_stk$ERA_Include == 1, ]
+  
+  plots_RegER_Box[[length(plots_RegER_Box)+1]] <- ggplot(ER_Region_stk, aes(x=Region, y=ER, color = Source, fill=Source)) +
+    geom_boxplot(position=position_dodge(0.85), alpha = 0.75) +
+    facet_wrap(~Period, ncol = 1) +
+    aes(x = fct_inorder(Region), fill = fct_inorder(Source)) +
+    scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
+    scale_color_manual(values = c("black","black")) + 
+    scale_x_discrete(limits = c("SEAK", "NBC", "SBC", "SUS")) +
+    theme_bw() +
+    guides(color=FALSE) +
+    theme(legend.position="bottom") +
+    xlab("") + 
+    ylab("Exploitation Rate") +
+    labs(title = paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Ocean Exploitation Rates by Region", sep = ""))
+}
+
+
+
+#---------- Maturation Rate plots ----------#
+plots_MatRates <- list()
+
+for(i in 1:length(StkList)) {
+  MatRate_stk <- mat_aeq[mat_aeq$Stock == StkList[i], c(1:4)]
+  
+  MatRate_FRAM_stk <- MatRate_FRAM[MatRate_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3,5)]
+  if(StkList[i] == "SUM") {
+    MatRate_FRAM_stk <- MatRate_FRAM_stk[MatRate_FRAM_stk$Age %in% c(2), ]
+    MatRate_FRAM_stk <- rbind(MatRate_FRAM_stk, c(3,0.087811), c(4,0.541315), c(5,1.000000))
+  }
+  MatRate_stk <- merge(MatRate_stk,MatRate_FRAM_stk)
+  colnames(MatRate_stk)[c(4,5)] <- c("ERA","FRAM")
+  
+  MatRate_stk_long <- pivot_longer(MatRate_stk, cols = 4:5, names_to = "Source", values_to = "MatRate")
+ 
+  plots_MatRates[[length(plots_MatRates)+1]] <- ggplot(MatRate_stk_long, aes(x=BroodYear, y=MatRate, color=Source, fill=Source, shape=Source)) +
+    geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
+    facet_wrap(~Age, ncol = 1, scales = "free_y") +
+    theme_bw() + # make the panel background white
+    scale_shape_manual(name="", breaks=c("ERA","FRAM"),
+                       values=c("ERA"=23,"FRAM"=21)) +
+    scale_color_manual(name="", breaks=c("ERA","FRAM"),
+                       values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+    scale_fill_manual(name="", breaks=c("ERA","FRAM"),
+                      values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+    theme(legend.position="bottom") +
+    labs(title=paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Maturation Rates", sep = ""),
+         y="Maturation Rate")
+}
+
+
+
+#---------- AEQ plots ----------#
+plots_AEQ <- list()
+
+for(i in 1:length(StkList)) {
+  AEQ_stk <- mat_aeq[mat_aeq$Stock == StkList[i], c(1:3,5)]
+  
+  AEQ_FRAM_stk <- AEQ_FRAM[AEQ_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3,5)]
+  colnames(AEQ_FRAM_stk)[2] <- "AEQ_FRAM"
+  AEQ_stk <- merge(AEQ_stk,AEQ_FRAM_stk)
+  colnames(AEQ_stk)[c(4,5)] <- c("ERA","FRAM")
+  
+  AEQ_stk_long <- pivot_longer(AEQ_stk, cols = 4:5, names_to = "Source", values_to = "AEQ")
+ 
+  plots_AEQ[[length(plots_AEQ)+1]] <- ggplot(AEQ_stk_long, aes(x=BroodYear, y=AEQ, color=Source, fill=Source, shape=Source)) +
+    geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
+    facet_wrap(~Age, ncol = 1, scales = "free_y") +
+    theme_bw() + # make the panel background white
+    scale_shape_manual(name="", breaks=c("ERA","FRAM"),
+                       values=c("ERA"=23,"FRAM"=21)) +
+    scale_color_manual(name="", breaks=c("ERA","FRAM"),
+                       values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+    scale_fill_manual(name="", breaks=c("ERA","FRAM"),
+                      values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+    theme(legend.position="bottom") +
+    labs(title=paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Adult Equivalent Rates", sep = ""),
+         y="AEQ")
+}
+
+
+
+
+
+
+```
+
+## Results
+
+### Overall Summary Across Stocks
+```{r Ocean ER Box Plot, fig.width = 8, fig.cap = "Box plots of ocean exploitation rates by stock and time period", echo=FALSE, message=FALSE, warning=FALSE}
+i=1
+plots_OceanER_Box[[i]]
+```
+
+BLAH BLAH BLAH...Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+### Individual Stock Results
+
+```{r eval=FALSE, include=FALSE, results='asis'}
+for(i in 1:length(StkList)) {
+  print("<b>stk_info[i,1]<b><br><br>")
+  
+  print(plots_OceanER_Line[[i]])
+  print(plots_RegER_Box[[i]])
+  print(plots_MatRates[[i]])
+  print(plots_AEQ[[i]])
+  
+  print("<br><br>")
+}
+```
+
+
+
+
+
+
+
+####`r stk_info[i,1]`
+```{r LRH, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r CWF, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r LRW, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r SPR, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r SUM, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r URB, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r WSH, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r LYF, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r SRH, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r RBT, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r QUE, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r HOK, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r ELK, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
