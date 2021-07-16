@@ -17,6 +17,7 @@ rm(list=ls(all=TRUE))
 library(readxl)
 library(tidyr)
 library(doBy)
+library(dplyr)
 library(forcats)
 library(ctctools)
 library(ggplot2)
@@ -27,7 +28,7 @@ library(kableExtra)
 # Load FRAM functions
 source("C:\\Users\\jonathan.carey\\Documents\\GitHub\\FRAM_R-Code\\FRAM_functions.R")
 
-StkList <- c("LRH","CWF","LRW","SPR","SUM","URB","WSH","LYF","SRH","RBT","QUE","HOK","ELK")
+StkList <- c("SAM","SSF","LRH","CWF","LRW","SPR","SUM","URB","WSH","LYF","SRH","RBT","QUE","HOK","ELK")
 start_cy <- 1999
 end_cy <- 2018
 start_by <- 1994
@@ -40,26 +41,31 @@ BP_tagcodes_FRAM <- read.csv(paste(Dir,"FRAM_ERA_Compare\\FRAM_BP_TagCodes.csv",
 MDT_path <-paste(Dir,"FRAM_ERA_Compare\\2020ERA_MortalityDistributionTables_V6_4age.xlsx", sep="")
 FRAM_path <- paste(Dir,"Valid2020_Round_7.1.mdb", sep="")
 
-OUT_folder <- paste(Dir,"FRAM_ERA_Compare\\2020_ERA_OUT\\",sep = "")
+OUT_folder <- paste(Dir,"FRAM_ERA_Compare\\2020_ERA\\OUT\\",sep = "")
 ```
 
 ## To-do
 * add stocks?
-* add funcionality for 2:1 ERA:FRAM stocks?
+* add functionality for 2:1 ERA:FRAM stocks?
+* add tab to show age-specific ERs?
+* pull ERs from TAMMs for PS stocks?
+* compare BYERs?
+* figure out a better way to handle stocks with mat rates in more than one time step
 * make mat-rate and AEQ figures taller?
 * fill in text
 
 ## Introduction
 
-As part of the annual preseason planning process for setting salmon fisheries in the marine waters of Washington and Oregon, the Pacific Fishery Management Council (PFMC) and Washington comanagers use the Fishery Regulation Assessment Model (FRAM) to estimate impacts of proposed fisheries on various coho and Chinook stocks.  For Chinook specifically, FRAM is used to help plan PFMC ocean fisheries that occur north of Cape Falcon, OR as well as those that occur in the Strait of Juan de Fuca and Puget Sound.  The FRAM is a deterministic single-pool model where each model run occurs over a single year and produced fishery impacts by stock for specific time periods and age classes.  For details on model structure and computational processes, see `REFERENCE TO FRAM DOCUMENTATION SITE?`.
+As part of the annual preseason planning process for setting salmon fisheries in the marine waters of Washington and Oregon, the Pacific Fishery Management Council (PFMC) and Washington co-managers use the Fishery Regulation Assessment Model (FRAM) to estimate impacts of proposed fisheries on various coho and Chinook stocks.  For Chinook specifically, FRAM is used to help plan PFMC ocean fisheries that occur north of Cape Falcon, OR as well as those that occur in the Strait of Juan de Fuca and Puget Sound.  The FRAM is a deterministic single-pool model where each model run occurs over a single year and estimates fishery impacts by stock for specific time periods and age classes.  For details on model structure and computational processes, in addition to a user manual, see the [FRAM Documentation Website](https://framverse.github.io/fram_doc/index.html).
 
-The FRAM is rooted in a set of base period data derived through species-specific cohort analysis procedures that are based primarily on coded-wire tag (CWT) recoveries.  Key Chinook base data include stock-age-fishery-time period specific base period exploitation rates, base period cohort sizes, maturation rates, adult equivalent (AEQ) rates, and growth function parameters.  The original set of base period data for Chinook was derived from CWTs released during the 1974 - 1979 brood years and shared many of the same CWT tag groups that were used to represent exploitation rate indicator stocks and model stocks of the Pacific Salmon Commission (PSC) Chinook model that is used for fishery management in accordance with the Pacific Salmon Treaty (PST).  In recent years, a considerable amount of effort has been devoted to contemporizing and continually refining the Chinook FRAM base period data set, which is now derived from CWTs released during the 2005 - 2008 brood years.  The most current base period calibration, referred to as "Round 7.1" was created in June 2021 and was produced along with a time series of postseason model runs (referred to as validation runs) ranging from 1992 - 2018.
+The FRAM is rooted in a set of base period data derived through species-specific cohort analysis procedures that are based primarily on coded-wire tag (CWT) recoveries.  Key Chinook base data include stock-age-fishery-time period specific exploitation rates, cohort sizes, maturation rates, adult equivalent (AEQ) rates, and growth function parameters.  The original set of base period data for Chinook was derived from CWTs released during the 1974 - 1979 brood years and shared many of the same CWT tag groups that were used to represent exploitation rate indicator stocks and model stocks of the Pacific Salmon Commission (PSC) Chinook model that is used for fishery management in accordance with the Pacific Salmon Treaty (PST).  In recent years, a considerable amount of effort has been devoted to contemporizing and continually refining the Chinook FRAM base period data set, which is now derived from CWTs released during the 2005 - 2008 brood years.  The most current base period calibration, referred to as "Round 7.1" was created in June 2021 and was produced along with a time series of postseason model runs (referred to as validation runs) ranging from 1992 - 2018.
 
-Utilizing these more contemporary base period years means that there is no longer overlap in the CWT tag groups used to represent many of the model stocks in both Chinook FRAM and the PSC Chinook model.  However, there is still considerable overlap between the tag codes used to represent many Chinook FRAM stocks and the brood year 2005 - 2008 tag codes used for exploitation rate indicator stocks as part of the Chinook Technical Committee's (CTC) annual Exploitation Rate Analysis (ERA).  The purpose of this assessment is to provide an evaluation of FRAM postseason performance by leveraging independently derived metrics from the CTC's annual ERA.    
+Utilizing these more contemporary base period years means that there is no longer overlap in the CWT tag groups used to represent many of the model stocks in both Chinook FRAM and the PSC Chinook model, as much of the base data for the PSC Chinook model are still rooted in earlier brood years.  However, there is still considerable overlap between the tag codes used to represent many Chinook FRAM stocks and the brood year 2005 - 2008 tag codes used for exploitation rate indicator stocks as part of the Chinook Technical Committee's (CTC) annual Exploitation Rate Analysis (ERA).  The purpose of this assessment is to provide an evaluation of FRAM postseason performance by comparing it with independently derived metrics from the CTC's annual ERA for appropriate stocks.    
 
 ### Similarities and differences between FRAM and ERA
 * both rooted in standard CWT-based cohort analysis
-* different IM rates
+* different IM rates (particularly in Puget Sound sport fisheries)
+* ERA uses empirical recoveries throughout the time series, FRAM scales to base period
 * given FRAM's reliance on a base period and the assumption of static parameters, it might be better to compare averages over time
 
 ## Methods
@@ -67,7 +73,7 @@ Utilizing these more contemporary base period years means that there is no longe
 ### Exploitation Rates
 
 #### ERA
-Calendar year exploitation rates are calculated as part of the CTC's ERA and can be obtained from AEQ total mortality distribution tables included as appendices to the annual "Exploitation Rate Analysis and Model Calibration" reports `(CTC 2021)`.  
+Each year the CTC conducts an "Exploitation Rate Analysis" (ERA), which involves a CWT-based cohort analysis that reconstructs the cohort size and exploitation rate history for a given set of exploitation rate indicator stocks.  Results from this analysis, in addition to those from the annual PSC Chinokk Model calibration, are published in a two volume "Exploitation Rate Analysis and Model Calibration" report, where [Volume One](https://www.psc.org/download/35/chinook-technical-committee/13374/tcchinook-21-1-v1.pdf) includes the body of the report and [Volume Two](https://www.psc.org/download/35/chinook-technical-committee/13375/tcchinook-21-1-v2.pdf) includes associated appendices.  Calendar year exploitation rates derived from the CTC's ERA can be obtained from AEQ total mortality distribution tables included in these appendices (see Appendix C in the above "Volume Two" link.  Ocean exploitation rates for a given stock/year are calculated by summing the percentage distributions across all AABM and ISBM fisheries (terminal fisheries are excluded).  It is important to note that, as the ERA is conducted using CWT tag codes with marked (adipose fin clipped) releases, these are estimates of exploitation rates experienced by the marked component of each stock.  For stocks that are not subjected to significant mark-selective fisheries, the difference in exploitation rates between the unmarked (adipose intact) and marked components of the stock would be expected to me minimal.  It is possible, however, that even in the absence of exposure to mark-selective fisheries, there could be differences in marked and unmarked exploitation rates on a stock due to differences in age composition between the two groups. 
 
 #### FRAM
 
@@ -77,13 +83,12 @@ Calendar year exploitation rates are calculated as part of the CTC's ERA and can
 
 #### FRAM
 
-Unlike in the ERA, where maturation rates are calculated independently for each seperate brood year, FRAM maturation rates are considered to be static and are an output of the base period calibration.
+Unlike in the ERA, where maturation rates are calculated independently for each separate brood year, FRAM maturation rates are considered to be static and are an output of the base period calibration.
 
-Each year the Chinook Technical Committee (CTC) of the Pacific Salmon Commission (PSC) conducts an "Exploitation Rate Analysis," which involves a cohort analysis that reconstructs the cohort size and history for a given set of exploitation rate indicator stocks and brood years using CWT release and recovery data. 
+FRAM exploitation rates were based on postseason validation runs conducted in June 2021 and based on the latest version of the Chinook FRAM base period calibration, referred to as 'round 7.1'.  For this analysis only preterminal (ocean) exploitation rates were evaluated, as FRAM does not account for terminal fishery impacts for many stocks.  FRAM  exploitation rates in a subset of fisheries , F, are calculated for a given stock, s, as: 
 
-FRAM exploitation rates were based on postseason validation runs conducted in June 2021 and based on the latest version of the Chinook FRAM base period calibration, referred to as 'round 7.1'.  For this analysis only preterminal (ocean) exploitation rates were evaluated, as FRAM does not account for terminal fishery impacts for many stocks.  FRAM ocean exploitatoin rates were calculated as: 
-
-$$ER = \sum_{f}Catch_{s,a,f,t}$$
+$$ER_{s,F,cy} = \frac{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f \in F}TotMort_{s,a,f,t} * AEQ_{s,a,t}\right)\right)}
+{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f=1}^{NumFish}TotMort_{s,a,f,t} * AEQ_{s,a,t} + Esc_{s,a,t}\right)\right)}$$
 
 ```{r Summarize ERA ERs, warning=FALSE, include=FALSE}
 # Summarize ERA ERs
@@ -252,7 +257,7 @@ for(i in 1:length(StkList)) {
         if(OUT_dat[k] == "FISHERY SPECIFIC EXPLOITATION RATES (LESS NATURAL MORTALITY)<TERMINAL AREAS=PROPORTION OF TERMINAL RUN ONLY>") {
           mat_ref <- k
           aeq_ref <- k
-          if(stk %in% c("SRH","QUE","HOK")) {
+          if(stk %in% c("SAM","SSF","SRH","QUE","HOK")) {
             mat_ref <- k+1
             aeq_ref <- k+2
           }
@@ -336,14 +341,26 @@ plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=
   # facet_wrap(~Period, ncol = 1) +
   aes(x = fct_inorder(Stock), fill = fct_inorder(Source)) +
   scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
-  scale_color_manual(values = c("black","black")) + 
+  scale_color_manual(values = c("gray40","gray40")) + 
   scale_x_discrete(limits = StkList) +
   theme_bw() +
   guides(color=FALSE) +
   theme(legend.position="bottom") +
   xlab("") + 
-  ylab("Exploitation Rate") +
-  labs(title = "Ocean Exploitation Rates")
+  ylab("Ocean Exploitation Rate") 
+
+plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=Stock, y=ER, color = Source, fill=Source)) +
+  geom_boxplot(position=position_dodge(0.85), alpha = 0.75) +
+  facet_wrap(~Period, ncol = 1) +
+  aes(x = fct_inorder(Stock), fill = fct_inorder(Source)) +
+  scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
+  scale_color_manual(values = c("gray40","gray40")) + 
+  scale_x_discrete(limits = StkList) +
+  theme_bw() +
+  guides(color=FALSE) +
+  theme(legend.position="bottom") +
+  xlab("") + 
+  ylab("Ocean Exploitation Rate")
 
 
 
@@ -356,6 +373,7 @@ for(i in 1:length(StkList)) {
   
   plots_OceanER_Line[[length(plots_OceanER_Line)+1]] <- ggplot(ER_Ocean_stk, aes(x=Year, y=ER, color=Source, fill=Source, shape=Source)) +
     geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
+    scale_y_continuous(limits = c(0,NA)) +
     theme_bw() + # make the panel background white
     scale_shape_manual(name="", breaks=c("ER_ERA","ER_FRAM"),
                        values=c("ER_ERA"=23,"ER_FRAM"=21)) +
@@ -382,7 +400,7 @@ for(i in 1:length(StkList)) {
     facet_wrap(~Period, ncol = 1) +
     aes(x = fct_inorder(Region), fill = fct_inorder(Source)) +
     scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
-    scale_color_manual(values = c("black","black")) + 
+    scale_color_manual(values = c("gray40","gray40")) + 
     scale_x_discrete(limits = c("SEAK", "NBC", "SBC", "SUS")) +
     theme_bw() +
     guides(color=FALSE) +
@@ -401,6 +419,10 @@ for(i in 1:length(StkList)) {
   MatRate_stk <- mat_aeq[mat_aeq$Stock == StkList[i], c(1:4)]
   
   MatRate_FRAM_stk <- MatRate_FRAM[MatRate_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3,5)]
+  if(StkList[i] == "SSF") {
+    MatRate_FRAM_stk <- MatRate_FRAM[MatRate_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3:5)]
+    MatRate_FRAM_stk <- MatRate_FRAM_stk[MatRate_FRAM_stk$TimeStep == 3, c(1,3)]
+  }
   if(StkList[i] == "SUM") {
     MatRate_FRAM_stk <- MatRate_FRAM_stk[MatRate_FRAM_stk$Age %in% c(2), ]
     MatRate_FRAM_stk <- rbind(MatRate_FRAM_stk, c(3,0.087811), c(4,0.541315), c(5,1.000000))
@@ -464,37 +486,39 @@ for(i in 1:length(StkList)) {
 
 ## Results
 
-### Overall Summary Across Stocks
-```{r Ocean ER Box Plot, fig.width = 8, fig.cap = "Box plots of ocean exploitation rates by stock and time period", echo=FALSE, message=FALSE, warning=FALSE}
-i=1
-plots_OceanER_Box[[i]]
+### Overall Summary Across Stocks {.tabset .tabset-fade .tabset-pills}
+
+#### Entire Time Series
+
+```{r Ocean ER Box Plot1, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+plots_OceanER_Box[[1]]
 ```
 
-BLAH BLAH BLAH...Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+#### By Time Period
+
+```{r Ocean ER Box Plot2, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+plots_OceanER_Box[[2]]
+```
 
 ### Individual Stock Results
 
 ```{r eval=FALSE, include=FALSE, results='asis'}
-for(i in 1:length(StkList)) {
-  print("<b>stk_info[i,1]<b><br><br>")
-  
-  print(plots_OceanER_Line[[i]])
-  print(plots_RegER_Box[[i]])
-  print(plots_MatRates[[i]])
-  print(plots_AEQ[[i]])
-  
-  print("<br><br>")
-}
+# for(i in 1:length(StkList)) {
+#   print("<b>stk_info[i,1]<b><br><br>")
+#   
+#   print(plots_OceanER_Line[[i]])
+#   print(plots_RegER_Box[[i]])
+#   print(plots_MatRates[[i]])
+#   print(plots_AEQ[[i]])
+#   
+#   print("<br><br>")
+# }
 ```
 
-
-
-
-
-
+`r i=1`
 
 ####`r stk_info[i,1]`
-```{r LRH, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk1, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -511,7 +535,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r CWF, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk2, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -528,7 +552,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r LRW, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk3, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -545,7 +569,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r SPR, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk4, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -562,7 +586,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r SUM, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk5, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -579,7 +603,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r URB, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk6, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -596,7 +620,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r WSH, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk7, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -613,7 +637,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r LYF, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk8, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -630,7 +654,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r SRH, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk9, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -647,7 +671,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r RBT, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk10, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -664,7 +688,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r QUE, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk11, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -681,7 +705,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r HOK, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk12, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -698,7 +722,7 @@ i=i+1
 
 
 ####`r stk_info[i,1]`
-```{r ELK, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stk13, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
 kable(tagtable, align = 'ccccc', row.names = F) %>%
   kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
@@ -712,4 +736,39 @@ plots_AEQ[[i]]
 i=i+1
 
 ```
+
+
+####`r stk_info[i,1]`
+```{r stk14, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
+
+####`r stk_info[i,1]`
+```{r stk15, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+kable(tagtable, align = 'ccccc', row.names = F) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+
+# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
+plots_OceanER_Line[[i]]
+plots_RegER_Box[[i]]
+plots_MatRates[[i]]
+plots_AEQ[[i]]
+
+i=i+1
+
+```
+
 
