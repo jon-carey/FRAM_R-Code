@@ -3,7 +3,7 @@ title: "Evaluation of post-season Chinook FRAM performance"
 author: " "
 date: "Some date, 2021"
 output: 
-  html_document: 
+  html_document:
     toc: true
     toc_depth: 4
     toc_float: true
@@ -17,6 +17,7 @@ rm(list=ls(all=TRUE))
 library(readxl)
 library(tidyr)
 library(doBy)
+library(pander)
 library(dplyr)
 library(forcats)
 library(ctctools)
@@ -502,273 +503,38 @@ plots_OceanER_Box[[2]]
 
 ### Individual Stock Results
 
-```{r eval=FALSE, include=FALSE, results='asis'}
-# for(i in 1:length(StkList)) {
-#   print("<b>stk_info[i,1]<b><br><br>")
-#   
-#   print(plots_OceanER_Line[[i]])
-#   print(plots_RegER_Box[[i]])
-#   print(plots_MatRates[[i]])
-#   print(plots_AEQ[[i]])
-#   
-#   print("<br><br>")
-# }
+```{r Print stock-specific output, eval=TRUE, include=TRUE, echo = FALSE, results='asis'}
+
+for(i in 1:length(StkList)) {
+	cat('  \n')
+	
+ 	pander::pandoc.header(paste(as.character(stk_info[i,1])), level = 4)
+		
+	cat('  \n')
+	
+	tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+  tagtable <- kable(tagtable, align = 'ccccc', row.names = F) %>%
+    kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+  print(tagtable)
+  	
+	cat('  \n')
+	
+	print(plots_OceanER_Line[[i]])
+	
+	cat('  \n')
+	
+	print(plots_RegER_Box[[i]])
+	
+	cat('  \n')
+	
+	print(plots_MatRates[[i]])
+	
+	cat('  \n')
+	
+	print(plots_AEQ[[i]])
+	
+	cat('  \n')
+   
+ }
 ```
-
-`r i=1`
-
-####`r stk_info[i,1]`
-```{r stk1, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk2, fig.width=8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk3, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk4, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk5, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk6, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk7, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk8, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk9, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk10, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk11, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk12, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk13, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk14, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
-
-####`r stk_info[i,1]`
-```{r stk15, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
-tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
-kable(tagtable, align = 'ccccc', row.names = F) %>%
-  kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
-
-# knitr::kable(BP_tagcodes[BP_tagcodes$Stock == StkList[i], ])
-plots_OceanER_Line[[i]]
-plots_RegER_Box[[i]]
-plots_MatRates[[i]]
-plots_AEQ[[i]]
-
-i=i+1
-
-```
-
 
