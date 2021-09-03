@@ -29,31 +29,37 @@ library(kableExtra)
 # Load FRAM functions
 source("C:\\Users\\jonathan.carey\\Documents\\GitHub\\FRAM_R-Code\\FRAM_functions.R")
 
-StkList <- c("SAM","SSF","LRH","CWF","LRW","SPR","SUM","URB","WSH","LYF","SRH","RBT","QUE","HOK","ELK")
+# StkList <- c("SAM","SSF","LRH","CWF","LRW","SPR","SUM","URB","WSH","LYF","SRH","RBT","QUE","HOK","ELK")
 start_cy <- 1999
 end_cy <- 2018
 start_by <- 1994
 end_by <- 2013
 
 Dir <- "C:\\Users\\jonathan.carey\\Documents\\FRAM\\Calibration_Validation\\Chinook\\2020\\Final Package 7.1\\"
-stk_info <- read.csv(paste(Dir,"FRAM_ERA_Compare\\stk_info.csv", sep=""))
+stk_info <- read.csv(paste(Dir,"FRAM_ERA_Compare\\stk_info_new.csv", sep=""))
 fish_info <- read.csv(paste(Dir,"FRAM_ERA_Compare\\fish_info.csv", sep=""))
-BP_tagcodes_FRAM <- read.csv(paste(Dir,"FRAM_ERA_Compare\\FRAM_BP_TagCodes.csv", sep=""))
+BP_tagcodes_FRAM <- read.csv(paste(Dir,"FRAM_ERA_Compare\\FRAM_BP_TagCodes_new.csv", sep=""))
 MDT_path <-paste(Dir,"FRAM_ERA_Compare\\2020ERA_MortalityDistributionTables_V6_4age.xlsx", sep="")
 FRAM_path <- paste(Dir,"Valid2020_Round_7.1.mdb", sep="")
 
 OUT_folder <- paste(Dir,"FRAM_ERA_Compare\\2020_ERA\\OUT\\",sep = "")
+
+StkList_FRAM <- unique(stk_info$Stock_Num)
+StkList_ERA <- unique(stk_info$Stock_ERA)
 ```
 
 ## To-do
-* add stocks?
-* add functionality for 2:1 ERA:FRAM stocks?
+* add table with stock crosswalk and acronyms/names
+* split "overall summary" box plots into multiple plots (PS, ColR, Coastal/Canada?) - things are too crammed currently. replace full stock names with appreviations?
+* document how ERA ERs are calculated when more than one ERA stock is used to represent a single FRAM stock
 * add tab to show age-specific ERs?
 * pull ERs from TAMMs for PS stocks?
 * compare BYERs?
-* figure out a better way to handle stocks with mat rates in more than one time step
+* document how annual mat rates were calculated for FRAM stocks
+* currently FRAM AEQs are TS3 - is there a way to get annual values so they're more comparable to ERA AEQs?
 * make mat-rate and AEQ figures taller?
 * fill in text
+* MatRate and AEQ plots are currently commented out and excluded from printing (need to figure out how to align ERA stocks with FRAM stocks - i.e., average values across ERA stocks?)
 
 ## Introduction
 
@@ -74,9 +80,14 @@ Utilizing these more contemporary base period years means that there is no longe
 ### Exploitation Rates
 
 #### ERA
-Each year the CTC conducts an "Exploitation Rate Analysis" (ERA), which involves a CWT-based cohort analysis that reconstructs the cohort size and exploitation rate history for a given set of exploitation rate indicator stocks.  Results from this analysis, in addition to those from the annual PSC Chinokk Model calibration, are published in a two volume "Exploitation Rate Analysis and Model Calibration" report, where [Volume One](https://www.psc.org/download/35/chinook-technical-committee/13374/tcchinook-21-1-v1.pdf) includes the body of the report and [Volume Two](https://www.psc.org/download/35/chinook-technical-committee/13375/tcchinook-21-1-v2.pdf) includes associated appendices.  Calendar year exploitation rates derived from the CTC's ERA can be obtained from AEQ total mortality distribution tables included in these appendices (see Appendix C in the above "Volume Two" link.  Ocean exploitation rates for a given stock/year are calculated by summing the percentage distributions across all AABM and ISBM fisheries (terminal fisheries are excluded).  It is important to note that, as the ERA is conducted using CWT tag codes with marked (adipose fin clipped) releases, these are estimates of exploitation rates experienced by the marked component of each stock.  For stocks that are not subjected to significant mark-selective fisheries, the difference in exploitation rates between the unmarked (adipose intact) and marked components of the stock would be expected to me minimal.  It is possible, however, that even in the absence of exposure to mark-selective fisheries, there could be differences in marked and unmarked exploitation rates on a stock due to differences in age composition between the two groups. 
+Each year the CTC conducts an "Exploitation Rate Analysis" (ERA), which involves a CWT-based cohort analysis that reconstructs the cohort size and exploitation rate history for a given set of exploitation rate indicator stocks.  Results from this analysis, in addition to those from the annual PSC Chinokk Model calibration, are published in a two volume "Exploitation Rate Analysis and Model Calibration" report, where [Volume One](https://www.psc.org/download/35/chinook-technical-committee/13374/tcchinook-21-1-v1.pdf) includes the body of the report and [Volume Two](https://www.psc.org/download/35/chinook-technical-committee/13375/tcchinook-21-1-v2.pdf) includes associated appendices.  Calendar year exploitation rates derived from the CTC's ERA can be obtained from AEQ total mortality distribution tables included in these appendices (see Appendix C in the above "Volume Two" link.  Ocean exploitation rates for a given stock/year are calculated by summing the percentage distributions across all AABM and ISBM fisheries (terminal fisheries are excluded).  It is important to note that, as the ERA is conducted using CWT tag codes with marked (adipose fin clipped) releases, these are estimates of exploitation rates experienced by the marked component of each stock.  For stocks that are not subjected to significant mark-selective fisheries (MSFs), the difference in exploitation rates between the unmarked (adipose intact) and marked components of the stock would be expected to me minimal.  It is possible, however, that even in the absence of exposure to mark-selective fisheries, there could be differences in marked and unmarked exploitation rates on a stock due to differences in age composition between the two groups. 
 
 #### FRAM
+FRAM exploitation rates were based on postseason validation runs conducted in June 2021, which used the latest version of the Chinook FRAM base period calibration, referred to as 9'round 7.1'.  Unlike the ERA, FRAM does accomodate for differential impacts on the marked and unmarked components of a stock when exposed to MSFs, thus, in order ensure comparability with exploitation rates from the ERA, FRAM exploitation rates presented in this document are for the marked component of the specified stock.  For this analysis only preterminal (ocean) exploitation rates were evaluated, as FRAM does not account for terminal fishery impacts for many stocks.  FRAM exploitation rates in a subset of fisheries, F, are calculated for a given stock, s, as: 
+
+$$ER_{s,F,cy} = \frac{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f \in F}TotMort_{s,a,f,t} * AEQ_{s,a,t}\right)\right)}
+{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f=1}^{NumFish}TotMort_{s,a,f,t} * AEQ_{s,a,t} + Esc_{s,a,t}\right)\right)}$$
+
 
 ### Maturation Rates
 
@@ -86,22 +97,17 @@ Each year the CTC conducts an "Exploitation Rate Analysis" (ERA), which involves
 
 Unlike in the ERA, where maturation rates are calculated independently for each separate brood year, FRAM maturation rates are considered to be static and are an output of the base period calibration.
 
-FRAM exploitation rates were based on postseason validation runs conducted in June 2021 and based on the latest version of the Chinook FRAM base period calibration, referred to as 'round 7.1'.  For this analysis only preterminal (ocean) exploitation rates were evaluated, as FRAM does not account for terminal fishery impacts for many stocks.  FRAM  exploitation rates in a subset of fisheries , F, are calculated for a given stock, s, as: 
-
-$$ER_{s,F,cy} = \frac{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f \in F}TotMort_{s,a,f,t} * AEQ_{s,a,t}\right)\right)}
-{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f=1}^{NumFish}TotMort_{s,a,f,t} * AEQ_{s,a,t} + Esc_{s,a,t}\right)\right)}$$
-
 ```{r Summarize ERA ERs, warning=FALSE, include=FALSE}
 # Summarize ERA ERs
 
 # empty data frame
-ERA_ER_Region <- data.frame(Stock = as.character(), Year = as.integer(), ERA_Include = as.integer(), 
+ERA_ER_Region <- data.frame(StockID_FRAM = as.integer(), Stock = as.character(), Year = as.integer(), ERA_Include = as.integer(), 
                             Region = as.character(), ER_ERA = as.numeric())
 
-for(i in 1:length(StkList)) {
-  TM_dat <- read_excel(path = MDT_path, sheet = paste(StkList[i], "total mort"), range = "A6:AG46", 
+for(i in 1:length(StkList_ERA)) {
+  TM_dat <- read_excel(path = MDT_path, sheet = paste(StkList_ERA[i], "total mort"), range = "A6:AG46", 
                         col_types = c("numeric", rep("text",2), rep("numeric",30)))
-  TM_dat$Stock <- StkList[i]
+  TM_dat$Stock <- StkList_ERA[i]
   TM_dat$ERA_Include <- 0
   TM_dat <- TM_dat[TM_dat$Year >= start_cy & TM_dat$Year <=end_cy, ]
   # TM_dat[ ,c(4:33)] <- as.numeric(TM_dat[ ,c(4:33)])
@@ -122,13 +128,14 @@ for(i in 1:length(StkList)) {
   TM_dat$NBC <- round(rowSums(TM_dat[ ,c(7:8,11:13)])/100,3)
   TM_dat$SBC <- round(rowSums(TM_dat[ ,c(9:10,14:16)])/100,3)
   TM_dat$SUS <- round(rowSums(TM_dat[ ,c(17:23)])/100,3)
+  TM_dat$StockID_FRAM <- stk_info[stk_info$Stock_ERA == StkList_ERA[i], 4]
   
-  TM_dat <- TM_dat[ ,c(34,1,35:39)]
-  TM_dat_long <- pivot_longer(TM_dat, cols = 4:7, names_to = "Region", values_to = "ER_ERA")
+  TM_dat <- TM_dat[ ,c(40,34,1,35:39)]
+  TM_dat_long <- pivot_longer(TM_dat, cols = 5:8, names_to = "Region", values_to = "ER_ERA")
   ERA_ER_Region <- rbind(ERA_ER_Region, TM_dat_long)
 }
 
-ERA_ER_Ocean <- summaryBy(ER_ERA~Stock+Year+ERA_Include, data = as.data.frame(ERA_ER_Region), 
+ERA_ER_Ocean <- summaryBy(ER_ERA~StockID_FRAM+Stock+Year+ERA_Include, data = as.data.frame(ERA_ER_Region), 
                           FUN = sum, keep.names = TRUE)
 
 rm(TM_dat, TM_dat_long, i, j)
@@ -141,7 +148,7 @@ rm(TM_dat, TM_dat_long, i, j)
 #Summarize FRAM ERs
 
 # empty data frame
-FRAM_ER_Region <- data.frame(Stock = as.character(), Year = as.integer(), Region = as.character(), 
+FRAM_ER_Region <- data.frame(Stock = as.character(), StockID_FRAM = as.integer(), Year = as.integer(), Region = as.character(), 
                              ER_FRAM = as.numeric())
 
 #Pull RunID info
@@ -149,9 +156,9 @@ RunID <- pull_RunID(FRAM_path)
 RunID <- RunID[RunID$RunYear >= start_cy & RunID$RunYear <= end_cy, c(2,6,11)]
 bpID <- unique(RunID$BasePeriodID)
 
-for(i in 1:length(StkList)) {
-  stk <- StkList[i]
-  stk_id <- stk_info[stk_info$Stock_ERA == StkList[i], 4] # using marked stock b/c ERA is run on marked codes and doesn't account for MSF
+for(i in 1:length(StkList_FRAM)) {
+  stk <- StkList_FRAM[i]
+  stk_id <- unique(stk_info[stk_info$Stock_Num == StkList_FRAM[i], 4]) # using marked stock b/c ERA is run on marked codes and doesn't account for MSF
   
   #Pull necessary data from FRAM database
   Esc <- pull_Escapement(FRAM_path, RunID$RunID, stk_id, timestep = c(1:3)) 
@@ -197,14 +204,15 @@ for(i in 1:length(StkList)) {
   FRAM_ER_stk <- merge(FRAM_ER_stk, Abund_yr[ ,c(1,4)], all.x = TRUE)
   FRAM_ER_stk$ER_FRAM <- round(FRAM_ER_stk$AEQ_Mort / FRAM_ER_stk$Abundance,3)
   FRAM_ER_stk$Stock <- stk
-  FRAM_ER_stk <- FRAM_ER_stk[ ,c(6,1,2,5)]
-  colnames(FRAM_ER_stk)[2] <- "Year"
+  FRAM_ER_stk$StockID_FRAM <- stk_id
+  FRAM_ER_stk <- FRAM_ER_stk[ ,c(6:7,1,2,5)]
+  colnames(FRAM_ER_stk)[3] <- "Year"
   
   FRAM_ER_Region <- rbind(FRAM_ER_Region, FRAM_ER_stk)
 }
 
 FRAM_ER_Region <- FRAM_ER_Region[!(FRAM_ER_Region$Region == "Term"), ]
-FRAM_ER_Ocean <- summaryBy(ER_FRAM~Stock+Year, data = FRAM_ER_Region, FUN = sum, keep.names = TRUE)
+FRAM_ER_Ocean <- summaryBy(ER_FRAM~Stock+StockID_FRAM+Year, data = FRAM_ER_Region, FUN = sum, keep.names = TRUE)
 
 rm(Abund_yr, AEQ, AEQ_yr, Esc, Esc_yr, FRAM_ER_stk, Mort, RunID, TermFlag, i, stk, stk_id)
 ```
@@ -214,8 +222,16 @@ rm(Abund_yr, AEQ, AEQ_yr, Esc, Esc_yr, FRAM_ER_stk, Mort, RunID, TermFlag, i, st
 ```{r Extract Maturation Rates and AEQs, warning=FALSE, include=FALSE}
 #---------- Get FRAM maturation rates ----------#
 MatRate_FRAM <- pull_MaturationRate(FRAM_path)
-MatRate_FRAM <- MatRate_FRAM[!(MatRate_FRAM$MaturationRate == 0), ]
+
+#begin test code to calculate annual FRAM mat rates
 MatRate_FRAM <- MatRate_FRAM[!(MatRate_FRAM$TimeStep == 4), ]
+MatRate_FRAM <- pivot_wider(MatRate_FRAM, names_from = TimeStep, values_from = MaturationRate)
+colnames(MatRate_FRAM)[c(4:6)] <- c("T1","T2","T3")
+MatRate_FRAM$MaturationRate <- MatRate_FRAM$T1 + ((1 - MatRate_FRAM$T1) * MatRate_FRAM$T2) + ((1 - MatRate_FRAM$T1) * (1 - MatRate_FRAM$T2) * MatRate_FRAM$T3)
+#end test code to calculate annual FRAM mat rates
+
+# MatRate_FRAM <- MatRate_FRAM[!(MatRate_FRAM$MaturationRate == 0), ]
+# MatRate_FRAM <- MatRate_FRAM[!(MatRate_FRAM$TimeStep == 4), ]
 
 
 #---------- Get FRAM AEQs ----------#
@@ -227,10 +243,11 @@ AEQ_FRAM <- AEQ_FRAM[AEQ_FRAM$TimeStep == 3, ]
 # empty data frame
 mat_aeq <- data.frame(Stock = as.character(), BroodYear = as.integer(), Age = as.integer(), 
                       MatRate = as.numeric(), AEQ = as.numeric())
-BP_tagcodes_ERA <- data.frame(Stock = as.character(), BroodYear = as.integer(), TagCode = as.character(), ERA = as.integer())
+BP_tagcodes_ERA <- data.frame(StockID_FRAM = as.integer(), Stock_ERA = as.character(), BroodYear = as.integer(), TagCode = as.character(), ERA = as.integer())
 
-for(i in 1:length(StkList)) {
-  stk <- StkList[i]
+for(i in 1:length(StkList_ERA)) {
+  stk <- StkList_ERA[i]
+  stk_fram <- stk_info[stk_info$Stock_ERA == stk, 4]
   
   for(j in start_by:end_by) {
     if(j < 2000) {
@@ -258,7 +275,7 @@ for(i in 1:length(StkList)) {
         if(OUT_dat[k] == "FISHERY SPECIFIC EXPLOITATION RATES (LESS NATURAL MORTALITY)<TERMINAL AREAS=PROPORTION OF TERMINAL RUN ONLY>") {
           mat_ref <- k
           aeq_ref <- k
-          if(stk %in% c("SAM","SSF","SRH","QUE","HOK")) {
+          if(stk %in% c("SAM","NSF","SSF","SKF","SKS","SKY","STL","SRH","QUE","HOK")) {
             mat_ref <- k+1
             aeq_ref <- k+2
           }
@@ -293,7 +310,7 @@ for(i in 1:length(StkList)) {
         for(l in 1:n) {
           code_n <- paste(substr(OUT_dat[code_ref1+l+1],7,8),substr(OUT_dat[code_ref1+l+1],10,11),
                           substr(OUT_dat[code_ref1+l+1],13,14),sep = "")
-          BP_tagcodes_ERA_n <- data.frame(Stock = stk, BroodYear = j, TagCode = code_n, ERA = 1)
+          BP_tagcodes_ERA_n <- data.frame(StockID_FRAM = stk_fram, Stock_ERA = stk, BroodYear = j, TagCode = code_n, ERA = 1)
           BP_tagcodes_ERA <- rbind(BP_tagcodes_ERA, BP_tagcodes_ERA_n)
         }
       }
@@ -301,12 +318,14 @@ for(i in 1:length(StkList)) {
   }
 }
 
+BP_tagcodes_FRAM$FRAM <- 1
 BP_tagcodes_FRAM$TagCode <- sprintf("%06d", BP_tagcodes_FRAM$TagCode)
 BP_tagcodes <- merge(BP_tagcodes_ERA, BP_tagcodes_FRAM, all = TRUE)
 BP_tagcodes$ERA[BP_tagcodes$ERA == 1] <- "x"
 BP_tagcodes$FRAM[BP_tagcodes$FRAM == 1] <- "x"
 BP_tagcodes$ERA[is.na(BP_tagcodes$ERA)] <- ""
 BP_tagcodes$FRAM[is.na(BP_tagcodes$FRAM)] <- ""
+BP_tagcodes <- drop_na(BP_tagcodes,StockID_FRAM)
 
 rm(mat_aeq_dat, aeq_2, aeq_3, aeq_4, aeq_5, aeq_ref, byr, i, j, k, l, n, mat_2, mat_3, mat_4, mat_5, mat_ref, 
    OUT_dat, OUT_path, stk, BP_tagcodes_ERA_n, code_n, code_ref1, code_ref2, BP_tagcodes_ERA, BP_tagcodes_FRAM)
@@ -315,8 +334,17 @@ rm(mat_aeq_dat, aeq_2, aeq_3, aeq_4, aeq_5, aeq_ref, byr, i, j, k, l, n, mat_2, 
 
 
 ```{r Generate Plots, warning=FALSE, include=FALSE}
+# Combine ERA ERs in instances where there is >1 ERA stock for 1 FRAM stock, also remove ERA ERs with include == 0
+ERA_ER_Region_orig <- ERA_ER_Region
+ERA_ER_Region <- ERA_ER_Region[ERA_ER_Region$ERA_Include == 1 ,c(1,3:6)]
+ERA_ER_Region <- summaryBy(ER_ERA~StockID_FRAM+Year+Region, data = as.data.frame(ERA_ER_Region), FUN = mean, keep.names = TRUE)
+
+ERA_ER_Ocean_orig <- ERA_ER_Ocean
+ERA_ER_Ocean <- ERA_ER_Ocean[ERA_ER_Ocean$ERA_Include == 1 ,c(1,3:5)]
+ERA_ER_Ocean <- summaryBy(ER_ERA~StockID_FRAM+Year, data = as.data.frame(ERA_ER_Ocean), FUN = mean, keep.names = TRUE)
+
 # merge ERA and FRAM ER data frames
-ER_Region <- merge(ERA_ER_Region, FRAM_ER_Region)
+ER_Region <- merge(FRAM_ER_Region, ERA_ER_Region, all = TRUE)
 ER_Region_long <- pivot_longer(ER_Region, cols = 5:6, names_to = "Source", values_to = "ER")
 ER_Region_long$Period <- ""
 for(i in 1:dim(ER_Region_long)[1]) {
@@ -324,7 +352,7 @@ for(i in 1:dim(ER_Region_long)[1]) {
   else {ER_Region_long$Period[i] <- "2009-2018"}
 }
 
-ER_Ocean <- merge(ERA_ER_Ocean, FRAM_ER_Ocean)
+ER_Ocean <- merge(FRAM_ER_Ocean, ERA_ER_Ocean, all = TRUE)
 ER_Ocean_long <- pivot_longer(ER_Ocean, cols = 4:5, names_to = "Source", values_to = "ER")
 ER_Ocean_long$Period <- ""
 for(i in 1:dim(ER_Ocean_long)[1]) {
@@ -332,32 +360,37 @@ for(i in 1:dim(ER_Ocean_long)[1]) {
   else {ER_Ocean_long$Period[i] <- "2009-2018"}
 }
 
-
+stk_names <- unique(stk_info[ ,c(4,2)])
+colnames(stk_names) <- c("StockID_FRAM","Stock_Name")
+ER_Region_long <- merge(stk_names, ER_Region_long)
+ER_Ocean_long <- merge(stk_names, ER_Ocean_long)
 
 #---------- Ocean ER box plots - all stocks----------#
 plots_OceanER_Box <- list()
 
-plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=Stock, y=ER, color = Source, fill=Source)) +
+plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=Stock_Name, y=ER, color = Source, fill=Source)) +
   geom_boxplot(position=position_dodge(0.85), alpha = 0.75) +
   # facet_wrap(~Period, ncol = 1) +
-  aes(x = fct_inorder(Stock), fill = fct_inorder(Source)) +
+  aes(x = fct_inorder(Stock_Name), fill = fct_inorder(Source)) +
   scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
   scale_color_manual(values = c("gray40","gray40")) + 
-  scale_x_discrete(limits = StkList) +
+  scale_x_discrete(limits = stk_names$Stock_Name) +
   theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   guides(color=FALSE) +
   theme(legend.position="bottom") +
   xlab("") + 
   ylab("Ocean Exploitation Rate") 
 
-plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=Stock, y=ER, color = Source, fill=Source)) +
+plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=Stock_Name, y=ER, color = Source, fill=Source)) +
   geom_boxplot(position=position_dodge(0.85), alpha = 0.75) +
   facet_wrap(~Period, ncol = 1) +
-  aes(x = fct_inorder(Stock), fill = fct_inorder(Source)) +
+  aes(x = fct_inorder(Stock_Name), fill = fct_inorder(Source)) +
   scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
   scale_color_manual(values = c("gray40","gray40")) + 
-  scale_x_discrete(limits = StkList) +
+  scale_x_discrete(limits = stk_names$Stock_Name) +
   theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   guides(color=FALSE) +
   theme(legend.position="bottom") +
   xlab("") + 
@@ -367,12 +400,13 @@ plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=
 
 #---------- Ocean ER line graphs ----------#
 plots_OceanER_Line <- list()
+StkList <- unique(ER_Ocean_long$Stock_Name)
 
 for(i in 1:length(StkList)) {
-  ER_Ocean_stk <- ER_Ocean_long[ER_Ocean_long$Stock == StkList[i], ]
+  ER_Ocean_stk <- ER_Ocean_long[ER_Ocean_long$Stock_Name == StkList[i], ]
   # ER_Ocean_stk <- ER_Ocean_stk[ER_Ocean_stk$ERA_Include == 1, ]
   
-  plots_OceanER_Line[[length(plots_OceanER_Line)+1]] <- ggplot(ER_Ocean_stk, aes(x=Year, y=ER, color=Source, fill=Source, shape=Source)) +
+  plots_OceanER_Line[[length(plots_OceanER_Line)+1]] <- ggplot(ER_Ocean_stk, aes(x=Year, y=ER, color=Source, fill=Source, shape=Source, group=Source)) +
     geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
     scale_y_continuous(limits = c(0,NA)) +
     theme_bw() + # make the panel background white
@@ -383,7 +417,7 @@ for(i in 1:length(StkList)) {
     scale_fill_manual(name="", breaks=c("ER_ERA","ER_FRAM"),
                       values=c("ER_ERA"="#66CDAA", "ER_FRAM"="#56B4E9")) +
     theme(legend.position="bottom") +
-    labs(title=paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Ocean Exploitation Rates", sep = ""),
+    labs(title=paste(StkList[i], "; Ocean Exploitation Rates", sep = ""),
          y="Ocean Exploitation Rate")
 }
 
@@ -393,13 +427,13 @@ for(i in 1:length(StkList)) {
 plots_RegER_Box <- list()
 
 for(i in 1:length(StkList)) {
-  ER_Region_stk <- ER_Region_long[ER_Region_long$Stock == StkList[i], ]
-  ER_Region_stk <- ER_Region_stk[ER_Region_stk$ERA_Include == 1, ]
+  ER_Region_stk <- ER_Region_long[ER_Region_long$Stock_Name == StkList[i], ]
+  # ER_Region_stk <- ER_Region_stk[ER_Region_stk$ERA_Include == 1, ]
   
-  plots_RegER_Box[[length(plots_RegER_Box)+1]] <- ggplot(ER_Region_stk, aes(x=Region, y=ER, color = Source, fill=Source)) +
+  plots_RegER_Box[[length(plots_RegER_Box)+1]] <- ggplot(ER_Region_stk, aes(x=Region, y=ER, color=Source, fill=Source)) +
     geom_boxplot(position=position_dodge(0.85), alpha = 0.75) +
     facet_wrap(~Period, ncol = 1) +
-    aes(x = fct_inorder(Region), fill = fct_inorder(Source)) +
+    # aes(x = fct_inorder(Region), fill = fct_inorder(Source)) +
     scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
     scale_color_manual(values = c("gray40","gray40")) + 
     scale_x_discrete(limits = c("SEAK", "NBC", "SBC", "SUS")) +
@@ -408,7 +442,7 @@ for(i in 1:length(StkList)) {
     theme(legend.position="bottom") +
     xlab("") + 
     ylab("Exploitation Rate") +
-    labs(title = paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Ocean Exploitation Rates by Region", sep = ""))
+    labs(title = paste(StkList[i], "; Ocean Exploitation Rates by Region", sep = ""))
 }
 
 
@@ -416,67 +450,67 @@ for(i in 1:length(StkList)) {
 #---------- Maturation Rate plots ----------#
 plots_MatRates <- list()
 
-for(i in 1:length(StkList)) {
-  MatRate_stk <- mat_aeq[mat_aeq$Stock == StkList[i], c(1:4)]
-  
-  MatRate_FRAM_stk <- MatRate_FRAM[MatRate_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3,5)]
-  if(StkList[i] == "SSF") {
-    MatRate_FRAM_stk <- MatRate_FRAM[MatRate_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3:5)]
-    MatRate_FRAM_stk <- MatRate_FRAM_stk[MatRate_FRAM_stk$TimeStep == 3, c(1,3)]
-  }
-  if(StkList[i] == "SUM") {
-    MatRate_FRAM_stk <- MatRate_FRAM_stk[MatRate_FRAM_stk$Age %in% c(2), ]
-    MatRate_FRAM_stk <- rbind(MatRate_FRAM_stk, c(3,0.087811), c(4,0.541315), c(5,1.000000))
-  }
-  MatRate_stk <- merge(MatRate_stk,MatRate_FRAM_stk)
-  colnames(MatRate_stk)[c(4,5)] <- c("ERA","FRAM")
-  
-  MatRate_stk_long <- pivot_longer(MatRate_stk, cols = 4:5, names_to = "Source", values_to = "MatRate")
- 
-  plots_MatRates[[length(plots_MatRates)+1]] <- ggplot(MatRate_stk_long, aes(x=BroodYear, y=MatRate, color=Source, fill=Source, shape=Source)) +
-    geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
-    facet_wrap(~Age, ncol = 1, scales = "free_y") +
-    theme_bw() + # make the panel background white
-    scale_shape_manual(name="", breaks=c("ERA","FRAM"),
-                       values=c("ERA"=23,"FRAM"=21)) +
-    scale_color_manual(name="", breaks=c("ERA","FRAM"),
-                       values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
-    scale_fill_manual(name="", breaks=c("ERA","FRAM"),
-                      values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
-    theme(legend.position="bottom") +
-    labs(title=paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Maturation Rates", sep = ""),
-         y="Maturation Rate")
-}
+# for(i in 1:length(StkList)) {
+#   MatRate_stk <- mat_aeq[mat_aeq$Stock == StkList[i], c(1:4)]
+#   
+#   MatRate_FRAM_stk <- MatRate_FRAM[MatRate_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3,7)]
+#   # if(StkList[i] == "SSF") {
+#   #   MatRate_FRAM_stk <- MatRate_FRAM[MatRate_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3:5)]
+#   #   MatRate_FRAM_stk <- MatRate_FRAM_stk[MatRate_FRAM_stk$TimeStep == 3, c(1,3)]
+#   # }
+#   # if(StkList[i] == "SUM") {
+#   #   MatRate_FRAM_stk <- MatRate_FRAM_stk[MatRate_FRAM_stk$Age %in% c(2), ]
+#   #   MatRate_FRAM_stk <- rbind(MatRate_FRAM_stk, c(3,0.087811), c(4,0.541315), c(5,1.000000))
+#   # }
+#   MatRate_stk <- merge(MatRate_stk,MatRate_FRAM_stk)
+#   colnames(MatRate_stk)[c(4,5)] <- c("ERA","FRAM")
+#   
+#   MatRate_stk_long <- pivot_longer(MatRate_stk, cols = 4:5, names_to = "Source", values_to = "MatRate")
+#  
+#   plots_MatRates[[length(plots_MatRates)+1]] <- ggplot(MatRate_stk_long, aes(x=BroodYear, y=MatRate, color=Source, fill=Source, shape=Source)) +
+#     geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
+#     facet_wrap(~Age, ncol = 1, scales = "free_y") +
+#     theme_bw() + # make the panel background white
+#     scale_shape_manual(name="", breaks=c("ERA","FRAM"),
+#                        values=c("ERA"=23,"FRAM"=21)) +
+#     scale_color_manual(name="", breaks=c("ERA","FRAM"),
+#                        values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+#     scale_fill_manual(name="", breaks=c("ERA","FRAM"),
+#                       values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+#     theme(legend.position="bottom") +
+#     labs(title=paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Maturation Rates", sep = ""),
+#          y="Maturation Rate")
+# }
 
 
 
 #---------- AEQ plots ----------#
 plots_AEQ <- list()
 
-for(i in 1:length(StkList)) {
-  AEQ_stk <- mat_aeq[mat_aeq$Stock == StkList[i], c(1:3,5)]
-  
-  AEQ_FRAM_stk <- AEQ_FRAM[AEQ_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3,5)]
-  colnames(AEQ_FRAM_stk)[2] <- "AEQ_FRAM"
-  AEQ_stk <- merge(AEQ_stk,AEQ_FRAM_stk)
-  colnames(AEQ_stk)[c(4,5)] <- c("ERA","FRAM")
-  
-  AEQ_stk_long <- pivot_longer(AEQ_stk, cols = 4:5, names_to = "Source", values_to = "AEQ")
- 
-  plots_AEQ[[length(plots_AEQ)+1]] <- ggplot(AEQ_stk_long, aes(x=BroodYear, y=AEQ, color=Source, fill=Source, shape=Source)) +
-    geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
-    facet_wrap(~Age, ncol = 1, scales = "free_y") +
-    theme_bw() + # make the panel background white
-    scale_shape_manual(name="", breaks=c("ERA","FRAM"),
-                       values=c("ERA"=23,"FRAM"=21)) +
-    scale_color_manual(name="", breaks=c("ERA","FRAM"),
-                       values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
-    scale_fill_manual(name="", breaks=c("ERA","FRAM"),
-                      values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
-    theme(legend.position="bottom") +
-    labs(title=paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Adult Equivalent Rates", sep = ""),
-         y="AEQ")
-}
+# for(i in 1:length(StkList)) {
+#   AEQ_stk <- mat_aeq[mat_aeq$Stock == StkList[i], c(1:3,5)]
+#   
+#   AEQ_FRAM_stk <- AEQ_FRAM[AEQ_FRAM$StockID == stk_info[stk_info$Stock_ERA == StkList[i], 4], c(3,5)]
+#   colnames(AEQ_FRAM_stk)[2] <- "AEQ_FRAM"
+#   AEQ_stk <- merge(AEQ_stk,AEQ_FRAM_stk)
+#   colnames(AEQ_stk)[c(4,5)] <- c("ERA","FRAM")
+#   
+#   AEQ_stk_long <- pivot_longer(AEQ_stk, cols = 4:5, names_to = "Source", values_to = "AEQ")
+#  
+#   plots_AEQ[[length(plots_AEQ)+1]] <- ggplot(AEQ_stk_long, aes(x=BroodYear, y=AEQ, color=Source, fill=Source, shape=Source)) +
+#     geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
+#     facet_wrap(~Age, ncol = 1, scales = "free_y") +
+#     theme_bw() + # make the panel background white
+#     scale_shape_manual(name="", breaks=c("ERA","FRAM"),
+#                        values=c("ERA"=23,"FRAM"=21)) +
+#     scale_color_manual(name="", breaks=c("ERA","FRAM"),
+#                        values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+#     scale_fill_manual(name="", breaks=c("ERA","FRAM"),
+#                       values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+#     theme(legend.position="bottom") +
+#     labs(title=paste(stk_info[stk_info$Stock_ERA == StkList[i], 1], "; Adult Equivalent Rates", sep = ""),
+#          y="AEQ")
+# }
 
 
 
@@ -505,14 +539,14 @@ plots_OceanER_Box[[2]]
 
 ```{r Print stock-specific output, eval=TRUE, include=TRUE, echo = FALSE, results='asis'}
 
-for(i in 1:length(StkList)) {
+for(i in 1:dim(stk_names)[1]) {
 	cat('  \n')
 	
- 	pander::pandoc.header(paste(as.character(stk_info[i,1])), level = 4)
+ 	pander::pandoc.header(paste(as.character(stk_names[i,2])), level = 4)
 		
 	cat('  \n')
 	
-	tagtable <- BP_tagcodes[BP_tagcodes$Stock == StkList[i], ]
+	tagtable <- BP_tagcodes[BP_tagcodes$StockID_FRAM == stk_names[i,1], c(2:6)]
   tagtable <- kable(tagtable, align = 'ccccc', row.names = F) %>%
     kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
   print(tagtable)
@@ -527,14 +561,14 @@ for(i in 1:length(StkList)) {
 	
 	cat('  \n')
 	
-	print(plots_MatRates[[i]])
-	
-	cat('  \n')
-	
-	print(plots_AEQ[[i]])
-	
-	cat('  \n')
-   
+	# print(plots_MatRates[[i]])
+	# 
+	# cat('  \n')
+	# 
+	# print(plots_AEQ[[i]])
+	# 
+	# cat('  \n')
+	#   
  }
 ```
 
