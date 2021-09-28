@@ -29,18 +29,18 @@ library(kableExtra)
 # Load FRAM functions
 source("C:\\Users\\jonathan.carey\\Documents\\GitHub\\FRAM_R-Code\\FRAM_functions.R")
 
-# StkList <- c("SAM","SSF","LRH","CWF","LRW","SPR","SUM","URB","WSH","LYF","SRH","RBT","QUE","HOK","ELK")
 start_cy <- 1999
 end_cy <- 2018
 start_by <- 1994
 end_by <- 2013
 
-Dir <- "C:\\Users\\jonathan.carey\\Documents\\FRAM\\Calibration_Validation\\Chinook\\2020\\Final Package 7.1\\"
-stk_info <- read.csv(paste(Dir,"FRAM_ERA_Compare\\stk_info_new.csv", sep=""))
-fish_info <- read.csv(paste(Dir,"FRAM_ERA_Compare\\fish_info.csv", sep=""))
+Dir <- "C:\\Users\\jonathan.carey\\Documents\\FRAM\\Calibration_Validation\\Chinook\\2020\\Final Package 7.1.1\\"
+stk_info <- read.csv(paste(Dir,"FRAM_ERA_Compare\\stk_info_new3.csv", sep=""))
+fish_info <- read.csv(paste(Dir,"FRAM_ERA_Compare\\fish_info_new.csv", sep=""))
 BP_tagcodes_FRAM <- read.csv(paste(Dir,"FRAM_ERA_Compare\\FRAM_BP_TagCodes_new.csv", sep=""))
+FRAM_adj_ERs <- read.csv(paste(Dir,"FRAM_ERA_Compare\\FRAM_adj_ERs.csv", sep=""))
 MDT_path <-paste(Dir,"FRAM_ERA_Compare\\2020ERA_MortalityDistributionTables_V6_4age.xlsx", sep="")
-FRAM_path <- paste(Dir,"Valid2020_Round_7.1.mdb", sep="")
+FRAM_path <- paste(Dir,"Valid2020_Round_7.1.1.mdb", sep="")
 
 OUT_folder <- paste(Dir,"FRAM_ERA_Compare\\2020_ERA\\OUT\\",sep = "")
 
@@ -52,11 +52,9 @@ colnames(stk_names) <- c("StockID_FRAM","Stock_Name")
 
 ## To-do
 * update CTC report link to 2020 ERA report if available prior to distribution
-* split "overall summary" box plots into multiple plots (PS, ColR, Coastal/Canada?) - things are too crammed currently. replace full stock names with abbreviations?
-* pull ERs from TAMMs for PS stocks?
-* currently FRAM AEQs are TS3 - is there a way to get annual values so they're more comparable to ERA AEQs? On second thought, I don't think providing AEQ comparisons is of much use.  They're simply a function of mat rates (which we're already comparing) and natural mortality rates (which are essentially the same between FRAM and ERA).  I've commented out AEQ comparisons.
-* fill in text
-* Include scatter plots of FRAM vs ERA ERs?
+* In FRAM ER methods, explain the removal of FW sport from abundances for certain PS stock/years.
+* work in abundances provided by Jeremiah/AHB for certain PS stocks
+* fill in more text
 * For review, include some focus on ERs for ERA stocks used by STT for overfishing determination
 * Note that variability in maturation rates would affect cohort sizes, which is of relevance to SRKW assessments (maybe there's something to cite in risk assessment?)
 * Acknowledge CTC for their support in providing data
@@ -69,15 +67,20 @@ colnames(stk_names) <- c("StockID_FRAM","Stock_Name")
 
 As part of the annual preseason planning process for setting salmon fisheries in the marine waters of Washington and Oregon, the Pacific Fishery Management Council (PFMC) and Washington co-managers use the Fishery Regulation Assessment Model (FRAM) to estimate impacts of proposed fisheries on various coho and Chinook stocks.  For Chinook specifically, FRAM is used to help plan PFMC ocean fisheries that occur north of Cape Falcon, OR as well as those that occur in the Strait of Juan de Fuca and Puget Sound.  The FRAM is a deterministic single-pool model where each model run occurs over a single year and estimates fishery impacts by stock for specific time periods and age classes.  For details on model structure and computational processes, in addition to a user manual, see the [FRAM Documentation Website](https://framverse.github.io/fram_doc/index.html).
 
-The FRAM is rooted in a set of base period data derived through species-specific cohort analysis procedures that are based primarily on coded-wire tag (CWT) recoveries.  Key Chinook base data include stock-age-fishery-time period specific exploitation rates, cohort sizes, maturation rates, adult equivalent (AEQ) rates, and growth function parameters.  The original set of base period data for Chinook was derived from CWTs released during the 1974 - 1979 brood years and shared many of the same CWT tag groups that were used to represent exploitation rate indicator stocks and model stocks of the Pacific Salmon Commission (PSC) Chinook model that is used for fishery management in accordance with the Pacific Salmon Treaty (PST).  In recent years, a considerable amount of effort has been devoted to contemporizing and continually refining the Chinook FRAM base period data set, which is now derived from CWTs released during the 2005 - 2008 brood years.  The most current base period calibration, referred to as "Round 7.1" was created in June 2021 and was produced along with a time series of postseason model runs (referred to as validation runs) ranging from 1992 - 2018.
+The FRAM is rooted in a set of base period data derived through species-specific cohort analysis procedures that are based primarily on coded-wire tag (CWT) recoveries.  Key Chinook base data include stock-age-fishery-time period specific exploitation rates, cohort sizes, maturation rates, adult equivalent (AEQ) rates, and growth function parameters.  The original set of base period data for Chinook was derived from CWTs released during the 1974 - 1979 brood years and shared many of the same CWT tag groups that were used to represent exploitation rate indicator stocks and model stocks of the Pacific Salmon Commission (PSC) Chinook Model that is used for fishery management in accordance with the Pacific Salmon Treaty (PST).  In recent years, a considerable amount of effort has been devoted to contemporizing and continually refining the Chinook FRAM base period data set, which is now derived from CWTs released during the 2005 - 2008 brood years.  The most current base period calibration, referred to as "Round 7.1.1" was created in September 2021 and was produced along with a time series of postseason model runs (referred to as validation runs) ranging from 1992 - 2018.
 
-Utilizing these more contemporary base period years means that there is no longer overlap in the CWT tag groups used to represent many of the model stocks in both Chinook FRAM and the PSC Chinook model, as much of the base data for the PSC Chinook model are still rooted in earlier brood years.  However, there is still considerable overlap between the tag codes used to represent many Chinook FRAM stocks and the brood year 2005 - 2008 tag codes used for exploitation rate indicator stocks as part of the Chinook Technical Committee's (CTC) annual Exploitation Rate Analysis (ERA).  The purpose of this assessment is to provide an evaluation of FRAM postseason performance by comparing it with independently derived metrics from the CTC's annual ERA for appropriate stocks.  It is important to acknowledge that the exploitation rates and other parameters produced by FRAM and the ERA are all estimates of the true values, which remain unknown.  While each model has strengths and weaknesses, in many cases it remains difficult to determine which is more accurate.  That said, this exercise remains useful in that it can help to identify discrepancies between the two models.  Subsequent investigations into these discrepancies can lead to identification of errors or other recommendations for improvement to either model.
+Utilizing these more contemporary base period years for FRAM means that there is no longer overlap in the CWT tag groups used to represent many of the model stocks in the PSC Chinook model, as much of the base data for the PSC Chinook model are still rooted in earlier brood years.  However, there is still considerable overlap between the tag codes used to represent many Chinook FRAM stocks and the brood year 2005 - 2008 tag codes used for exploitation rate indicator stocks as part of the Chinook Technical Committee's (CTC) annual Exploitation Rate Analysis (ERA).  The purpose of this assessment is to provide an evaluation of FRAM postseason performance by comparing it with independently derived metrics from the CTC's annual ERA for appropriate stocks.  It is important to acknowledge that the exploitation rates and other parameters produced by FRAM and the ERA are all estimates of the true values, which remain unknown.  While each model has strengths and weaknesses, in many cases it remains difficult to determine which is more accurate.  That said, this exercise remains useful in that it can help to identify discrepancies between the two models.  Subsequent investigations into these discrepancies can lead to identification of errors or other recommendations for improvement to either model.
 
 ### Similarities and differences between FRAM and ERA (STILL NEED TO COMPLETE THIS SECTION)
-* both rooted in standard CWT-based cohort analysis
-* different IM rates (particularly in Puget Sound sport fisheries)
-* ERA uses empirical recoveries throughout the time series, FRAM scales to base period
 * given FRAM's reliance on a base period and the assumption of static parameters, it might be better to compare averages over time
+
+Before comparing output of these two models, it is important to highlight some of the key similarities and differences between them.  Both processes are rooted in a standard CWT-based cohort analysis.  A key difference, however, is that while FRAM uses a single cohort analysis to derive a set of base period data, the ERA conducts a separate cohort analysis for each individual brood year across the time series of available data.  This difference is a result of the primary intended use of each model.  The ERA is conducted in a postseason context only, as it requires CWT recoveries from a given year in order to produce output for that year.  Chinook FRAM, however, can be used in both a preseason and postseason context, although the primary use is in a preseason context for estimating the impacts of proposed fisheries on various Chinook stocks during an upcoming fishing season.  As such, the model employs a set of base period reference data, including stock-age-fishery-time period specific exploitation rates and maturation rates, which remain static between model runs.  
+
+Given the need to accomodate the fishery management cycle and different fishing seasons (e.g., winter, spring, summer) during preseason model runs, Chinook FRAM operates over a series of four time steps within a given year: (1) the preceding October to April, (2) May to June, (3) July to September, and (4) October to the following April.  In contrast, the ERA operates over a single annual time step for each calendar year.  For the purposes of this assessment, FRAM exploitation rates are calculated by summing across time steps 1-3, thus a given year represents October of the preceding year through September of the year specified, resulting in a slight disconnect between the true calendar years represented in the ERA.
+
+Both models incorporate natural mortality at the same assumed annual rates of 40% for age 2, 30% for age 3, 20% for age 4, and 10% for age 5.  Both models also account for incidental fishing mortality (e.g., shaker mortality, legal and sublegal non-retention, drop-off), however, the assumed release mortality and drop-off mortality rates differ.
+
+Chinook FRAM is a multi-stock model which, with a few notable exceptions, attempts to account for the majority of Chinook production from the Sacramento River in the South to Cape Caution, British Columbia in the north. 
 
 ## Methods
 
@@ -85,7 +88,7 @@ Utilizing these more contemporary base period years means that there is no longe
 The table below povides a list of FRAM and ERA stocks that were included in this evaluation and how thery relate to each other, based on a review and comparison of the CWT codes used to represent each stock.  In all cases there is at least some overlap in the tag codes used to represent the FRAM and ERA stocks.  In some cases there is more than one ERA stock used to represent a single FRAM stock.  In these cases, exploitation rates and maturation rates were averaged across all ERA stocks that correspond to a single FRAM stock.  There are some FRAM stocks that were not included in this evaluation due to lack of a suitable ERA counterpart.  Generally these were small Puget Sound yearling stocks (e.g., South Puget Sound fall yearling, Hood Canal fall yearling), stocks withouth marked (adipose fin clipped) tag codes to represent them, (e.g., White River spring, Strait of Juan de Fuca), or stocks that are outside the purview of the PST (e.g., Sacrament River Fall Chinook).
 
 ```{r stock_crosswalk, echo = FALSE, out.width='100%'}
-knitr::include_graphics("C:/Users/jonathan.carey/Documents/FRAM/Calibration_Validation/Chinook/2020/Final Package 7.1/FRAM_ERA_Compare/StkCrosswalk.jpg")
+knitr::include_graphics("C:/Users/jonathan.carey/Documents/FRAM/Calibration_Validation/Chinook/2020/Final Package 7.1.1/FRAM_ERA_Compare/StkCrosswalk.jpg")
 ```
 
 
@@ -93,28 +96,36 @@ knitr::include_graphics("C:/Users/jonathan.carey/Documents/FRAM/Calibration_Vali
 ### Exploitation Rates
 
 #### ERA
-Each year the CTC conducts an "Exploitation Rate Analysis" (ERA), which involves a CWT-based cohort analysis that reconstructs the cohort size and exploitation rate history for a given set of exploitation rate indicator stocks.  Methods and algorithms central to the ERA can be found in Appendix II, Supplement B of [CTC, 1988](https://www.psc.org/download/35/chinook-technical-committee/2150/tcchinook88-2app2.pdf).  Results from this analysis, in addition to those from the annual PSC Chinook Model calibration, are published in a two volume "Exploitation Rate Analysis and Model Calibration" report, where [Volume One](https://www.psc.org/download/35/chinook-technical-committee/13374/tcchinook-21-1-v1.pdf) includes the body of the report and [Volume Two](https://www.psc.org/download/35/chinook-technical-committee/13375/tcchinook-21-1-v2.pdf) includes associated appendices.  Calendar year exploitation rates derived from the CTC's ERA can be obtained from AEQ total mortality distribution tables included in these appendices (see Appendix C in the above "Volume Two" link).  Ocean exploitation rates for a given stock/year are calculated by summing the percentage distributions across all AABM and ISBM fisheries (terminal fisheries are excluded).  It is important to note that, as the ERA is conducted using CWT tag codes with marked releases, these are estimates of exploitation rates experienced by the marked component of each stock.  For stocks that are not subjected to significant mark-selective fisheries (MSFs), the difference in exploitation rates between the unmarked (adipose intact) and marked components of the stock would be expected to me minimal.  It is possible, however, that even in the absence of exposure to mark-selective fisheries, there could be differences in marked and unmarked exploitation rates on a stock due to differences in age composition between the two groups. The CTC is currently in the process of incorporating MSF algorithms into the ERA.
+Each year the CTC conducts an "Exploitation Rate Analysis" (ERA), which involves a CWT-based cohort analysis that reconstructs the cohort size and exploitation rate history for a given set of exploitation rate indicator stocks.  Methods and algorithms central to the ERA can be found in Appendix II, Supplement B of [CTC, 1988](https://www.psc.org/download/35/chinook-technical-committee/2150/tcchinook88-2app2.pdf).  Results from this analysis, in addition to those from the annual PSC Chinook Model calibration, are published in a two volume "Exploitation Rate Analysis and Model Calibration" report, where [Volume One](https://www.psc.org/download/35/chinook-technical-committee/13374/tcchinook-21-1-v1.pdf) includes the body of the report and [Volume Two](https://www.psc.org/download/35/chinook-technical-committee/13375/tcchinook-21-1-v2.pdf) includes associated appendices.  Calendar year exploitation rates derived from the CTC's ERA can be obtained from AEQ total mortality distribution tables included in these appendices (see Appendix C in the above "Volume Two" link) and are calculated for each stock (s) in a given calendar year (cy) for a subset of fisheries (F) as:
+
+$$ER_{cy,s,F} = \frac{\sum_{a=MinAge}^{MaxAge}\left(\sum_{f \in F}TotMort_{cy,s,a,f,t} * AEQ_{s,a,t}\right)}
+{\sum_{a=MinAge}^{MaxAge}\left(\sum_{f=1}^{NumFish}TotMort_{cy,s,a,f,t} * AEQ_{s,a,t} + Esc_{cy,s,a,t}\right)}$$
+
+Ocean exploitation rates for a given stock/year are calculated by summing the percentage distributions across all AABM and ISBM fisheries (terminal fisheries are excluded).  It is important to note that, as the ERA is conducted using CWT tag codes with marked releases, these are estimates of exploitation rates experienced by the marked component of each stock.  For stocks that are not subjected to significant mark-selective fisheries (MSFs), the difference in exploitation rates between the unmarked (adipose intact) and marked components of the stock would be expected to me minimal.  It is possible, however, that even in the absence of exposure to mark-selective fisheries, there could be differences in marked and unmarked exploitation rates on a stock due to differences in age composition between the two groups. The CTC is currently in the process of incorporating MSF algorithms into the ERA.
 
 #### FRAM
-FRAM exploitation rates were based on postseason validation runs conducted in June 2021, which used the latest version of the Chinook FRAM base period calibration, referred to as 'round 7.1'.  Unlike the ERA, FRAM does accommodate for differential impacts on the marked and unmarked components of a stock when exposed to MSFs, thus, in order ensure comparability with exploitation rates from the ERA, FRAM exploitation rates presented in this document are derived using the marked component of each stock.  For this analysis only preterminal (ocean) exploitation rates were evaluated, as FRAM does not account for terminal or freshwater fishery impacts for most stocks that originate outside of Puget Sound.  FRAM exploitation rates for a subset of fisheries (F), are calculated for a given stock (s), as: 
+FRAM exploitation rates were based on postseason validation runs conducted in June 2021, which used the latest version of the Chinook FRAM base period calibration, referred to as 'round 7.1'.  Unlike the ERA, FRAM does accommodate for differential impacts on the marked and unmarked components of a stock when exposed to MSFs, thus, in order ensure comparability with exploitation rates from the ERA, FRAM exploitation rates presented in this document are derived using the marked component of each stock.  For this analysis only preterminal (ocean) exploitation rates were evaluated, as FRAM does not account for terminal or freshwater fishery impacts for most stocks that originate outside of Puget Sound.  FRAM exploitation rates for a subset of fisheries (F), are calculated for a given catch year (cy) and stock (s), as: 
 
-$$ER_{s,F,cy} = \frac{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f \in F}TotMort_{s,a,f,t} * AEQ_{s,a,t}\right)\right)}
-{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f=1}^{NumFish}TotMort_{s,a,f,t} * AEQ_{s,a,t} + Esc_{s,a,t}\right)\right)}$$
+$$ER_{cy,s,F} = \frac{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f \in F}TotMort_{cy,s,a,f,t} * AEQ_{s,a,t}\right)\right)}
+{\sum_{t=1}^{3}\left(\sum_{a=MinAge}^{MaxAge}\left(\sum_{f=1}^{NumFish}TotMort_{cy,s,a,f,t} * AEQ_{s,a,t} + Esc_{cy,s,a,t}\right)\right)}$$
 
+Please note that the FRAM exploitation rates presented in this assessment will differ from those that may reported in other forums in an effort to produce rates that are comparable to those produced by the ERA.  These difference are primarily due to:
+  1. Use of the "marked" stock component rather than the "unmarked" stock component, which is often used to estimate impacts on natural origin stocks.
+  2. Inclusion of age 2 fish in escapement and the resulting abundance which serves as the denominator of the exploitation rate equation.  Typically FRAM derived exploitation rates do not include age 2 fish in escapement.
+  3. Summation of annual impacts across FRAM time steps 1 through 3 (October through September), rather than time steps 2 through 4 (May through April), which is typically the practice when assessing Puget Sound stock impacts.
 
 ### Maturation Rates
 
-#### ERA
-Maturation rates for ERA stocks are calculated during the cohort analysis on an annual basis for each brood year (by), and age (a), as:
+Maturation rates are calculated similarly in both the ERA and FRAM base period cohort analyses as the mature portion of the total cohort after preterminal fishing, or:
 
-$$MatRate_{by,a} = \frac{TotMatCat_{by,a} + Escape_{by,a}}{Cohort_{by,a} * SurvRte_{a} - TotOcnCat_{by,a}}$$
+$$MatRate_{by,a} = \frac{TermMort_{by,a} + Escape_{by,a}}{Cohort_{by,a} * SurvRte_{a} - PTermMort_{by,a}}$$
 
-where TotMatCat is the sum of catch and indicental mortality in all terminal fisheries (encounterin mature fish only) and TotOcnCat is the sum of catch and incidental mortality in all pre-terminal (mixed-maturity) fisheries.
-
-#### FRAM
-Unlike in the ERA, where maturation rates are calculated independently for each separate brood year, FRAM maturation rates are considered to be static and are an output of the base period calibration.  Further, they are calculated separately for each Chinook FRAM time step (e.g., Oct-Apr, May-Jun, Jul-Sep).  In order to provide maturation rates that are comparable to then annual rates for each ERA stock, annual maturation rates were calculated from the time step-specific rates for each FRAM stock (s) and age (a) as:
+A distinction is that while the ERA maturation rates are calculated on an annual basis, FRAM maturation rates are calculated separately for each Chinook FRAM time step (e.g., Oct-Apr, May-Jun, Jul-Sep).  In order to provide FRAM maturation rates that are comparable to then annual rates produced by the ERA, annual maturation rates were calculated from the time step-specific rates for each FRAM stock (s) and age (a) as:
 
 $$MatRate_{s,a} = MatRate_{s,a,T1} + \left(\left(1 - MatRate_{s,a,T1}\right) * MatRate_{s,a,T2}\right) + \left(\left(1 - MatRate_{s,a,T1}\right) * \left(1 - MatRate_{s,a,T2}\right) * MatRate_{s,a,T3}\right)$$
+
+It is also worth noting that whereas the ERA maturation rates are calculated using CWT recovery data for each brood year across the time series, the FRAM maturation rates are calculated as part of the base period calibration, thus, as part of the base period data set they remain constant between model runs (i.e., are static across all years in this assessment).
+
 
 ```{r Summarize ERA ERs, warning=FALSE, include=FALSE}
 # Summarize ERA ERs
@@ -169,6 +180,7 @@ rm(TM_dat, TM_dat_long, i, j)
 # empty data frame
 FRAM_ER_Region <- data.frame(Stock = as.character(), StockID_FRAM = as.integer(), Year = as.integer(), Region = as.character(), 
                              ER_FRAM = as.numeric())
+# abund_chk <- data.frame(StockID_FRAM = as.integer(), RunYear = as.integer(), AEQ_Mort = as.numeric(), Escapement = as.numeric(), Abundance = as.numeric())
 
 #Pull RunID info
 RunID <- pull_RunID(FRAM_path)
@@ -228,6 +240,10 @@ for(i in 1:length(StkList_FRAM)) {
   colnames(FRAM_ER_stk)[3] <- "Year"
   
   FRAM_ER_Region <- rbind(FRAM_ER_Region, FRAM_ER_stk)
+  
+  # Abund_yr$StockID_FRAM <- stk_id
+  # Abund_yr <- Abund_yr[ ,c(5,1:4)]
+  # abund_chk <- rbind(abund_chk, Abund_yr)
 }
 
 FRAM_ER_Region <- FRAM_ER_Region[!(FRAM_ER_Region$Region == "Term"), ]
@@ -408,38 +424,33 @@ ER_Ocean_long <- merge(stk_names, ER_Ocean_long)
 #---------- Ocean ER box plots - all stocks----------#
 plots_OceanER_Box <- list()
 
-plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=Stock_Name, y=ER, color = Source, fill=Source)) +
-  geom_boxplot(position=position_dodge(0.85), alpha = 0.75) +
-  # facet_wrap(~Period, ncol = 1) +
-  aes(x = fct_inorder(Stock_Name), fill = fct_inorder(Source)) +
-  scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
-  scale_color_manual(values = c("gray40","gray40")) + 
-  scale_x_discrete(limits = stk_names$Stock_Name) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  guides(color=FALSE) +
-  theme(legend.position="bottom") +
-  xlab("") + 
-  ylab("Ocean Exploitation Rate") 
+for(i in 1:length(unique(stk_info$Region))) {
+  stk_reg <- stk_info[ ,c(2,7)]
+  reg <- as.character(unique(stk_info$Region)[i])
+  stk_names_reg <- unique(stk_info[stk_info$Region == reg ,c(4,2)])
+  ER_Ocean_reg <- merge(ER_Ocean_long, stk_reg)
+  ER_Ocean_reg <- ER_Ocean_reg[ER_Ocean_reg$Region == reg, ]
+  ER_Ocean_reg <- droplevels(ER_Ocean_reg)
 
-plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_long, aes(x=Stock_Name, y=ER, color = Source, fill=Source)) +
-  geom_boxplot(position=position_dodge(0.85), alpha = 0.75) +
-  facet_wrap(~Period, ncol = 1) +
-  aes(x = fct_inorder(Stock_Name), fill = fct_inorder(Source)) +
-  scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) + 
-  scale_color_manual(values = c("gray40","gray40")) + 
-  scale_x_discrete(limits = stk_names$Stock_Name) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  guides(color=FALSE) +
-  theme(legend.position="bottom") +
-  xlab("") + 
-  ylab("Ocean Exploitation Rate")
+  plots_OceanER_Box[[length(plots_OceanER_Box)+1]] <- ggplot(ER_Ocean_reg, aes(x=Stock_Name, y=ER, color = Source, fill=Source)) +
+    geom_boxplot(position=position_dodge(0.85), alpha = 0.75) +
+    # facet_wrap(~Period, ncol = 1) +
+    aes(x = fct_inorder(Stock_Name), fill = fct_inorder(Source)) +
+    scale_fill_manual("", values = c("#66CDAA", "#56B4E9")) +
+    scale_color_manual(values = c("gray40","gray40")) +
+    scale_x_discrete(limits = stk_names_reg$Stock_Name) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+    guides(color=FALSE) +
+    theme(legend.position="bottom") +
+    xlab("") +
+    ylab("Ocean Exploitation Rate")
+}
 
 
 #---------- Ocean ER line graphs ----------#
 plots_OceanER_Line <- list()
-StkList <- unique(ER_Ocean_long$Stock_Name)
+StkList <- stk_names$Stock_Name
 ER_Ocean_long$Year <- as.integer(ER_Ocean_long$Year)
 
 for(i in 1:length(StkList)) {
@@ -458,9 +469,36 @@ for(i in 1:length(StkList)) {
                       values=c("ER_ERA"="#66CDAA", "ER_FRAM"="#56B4E9")) +
     theme(legend.position="bottom") +
     labs(title=paste(StkList[i], "; Ocean Exploitation Rates", sep = ""),
-         subtitle = "Note: gray shaded area corresponds to base period return years.",
+         subtitle = "Note: gray shaded area corresponds to base period return years",
          y="Ocean Exploitation Rate") +
     theme(plot.subtitle = element_text(size = 8, face = "italic"))
+}
+
+
+#---------- Ocean ER scatter plots ----------#
+plots_OceanER_Scatter <- list()
+ER_Ocean <- merge(stk_names, ER_Ocean)
+ER_Ocean$Period <- ""
+for(i in 1:dim(ER_Ocean)[1]) {
+  if(ER_Ocean$Year[i] < 2009) {ER_Ocean$Period[i] <- "1999-2008"}
+  else {ER_Ocean$Period[i] <- "2009-2018"}
+}
+
+for(i in 1:length(StkList)) {
+  ER_Ocean_stk <- ER_Ocean[ER_Ocean$Stock_Name == StkList[i], ]
+  
+  plots_OceanER_Scatter[[length(plots_OceanER_Scatter)+1]] <- ggplot(ER_Ocean_stk, aes(x=ER_FRAM, y=ER_ERA, fill=Period, shape=Period, group=Period)) +
+    # annotate("rect", xmin = 2007, xmax = 2013, ymin = -Inf, ymax = Inf, alpha = 0.2) +
+    geom_point(size=3, line=1.5, alpha=.9, colour = "gray40", stroke=1.25) + 
+    geom_abline(coef = c(0,1), linetype="dotted") + 
+    xlim(0,0.75) + ylim(0,0.75) + 
+    scale_shape_manual(name="", breaks=c("1999-2008","2009-2018"),
+                      values=c("1999-2008"=23, "2009-2018"=21)) +
+    scale_fill_manual(name="", breaks=c("1999-2008","2009-2018"),
+                      values=c("1999-2008"="gray80", "2009-2018"="#FF862F")) +
+    theme_bw() + # make the panel background white
+    # theme(legend.position="bottom") +
+    labs(title=StkList[i])
 }
 
 
@@ -491,14 +529,16 @@ plots_MatRates <- list()
 
 for(i in 1:length(StkList)) {
   MatRate_stk <- MatRate[MatRate$Stock_Name == StkList[i], ]
+  MatRate_stk <- MatRate_stk[order(-MatRate_stk$Age), ]
+  MatRate_stk$Age <- as.character(MatRate_stk$Age)
 
-  plots_MatRates[[length(plots_MatRates)+1]] <- ggplot(MatRate_stk, aes(x=BroodYear, y=MatRate, color=Source, fill=Source, shape=Source)) +
+  plots_MatRates[[length(plots_MatRates)+1]] <- ggplot(MatRate_stk, aes(x=BroodYear, y=MatRate, color=Source, fill=Source, shape=Age)) +
     annotate("rect", xmin = 2005, xmax = 2008, ymin = -Inf, ymax = Inf, alpha = 0.2) +
     geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
-    facet_wrap(~Age, ncol = 1, scales = "free_y") +
+    # facet_wrap(~Age, ncol = 1, scales = "free_y") +
     theme_bw() + # make the panel background white
-    scale_shape_manual(name="", breaks=c("ERA","FRAM"),
-                       values=c("ERA"=23,"FRAM"=21)) +
+    scale_shape_manual(name="", breaks=c("2","3","4","5"),
+                       values=c("2"=22,"3"=21,"4"=23,"5"=24)) +
     scale_color_manual(name="", breaks=c("ERA","FRAM"),
                        values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
     scale_fill_manual(name="", breaks=c("ERA","FRAM"),
@@ -509,6 +549,27 @@ for(i in 1:length(StkList)) {
          y="Maturation Rate") +
     theme(plot.subtitle = element_text(size = 8, face = "italic"))
 }
+
+# for(i in 1:length(StkList)) {
+#   MatRate_stk <- MatRate[MatRate$Stock_Name == StkList[i], ]
+# 
+#   plots_MatRates[[length(plots_MatRates)+1]] <- ggplot(MatRate_stk, aes(x=BroodYear, y=MatRate, color=Source, fill=Source, shape=Source)) +
+#     annotate("rect", xmin = 2005, xmax = 2008, ymin = -Inf, ymax = Inf, alpha = 0.2) +
+#     geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
+#     facet_wrap(~Age, ncol = 1, scales = "free_y") +
+#     theme_bw() + # make the panel background white
+#     scale_shape_manual(name="", breaks=c("ERA","FRAM"),
+#                        values=c("ERA"=23,"FRAM"=21)) +
+#     scale_color_manual(name="", breaks=c("ERA","FRAM"),
+#                        values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+#     scale_fill_manual(name="", breaks=c("ERA","FRAM"),
+#                       values=c("ERA"="#66CDAA", "FRAM"="#56B4E9")) +
+#     theme(legend.position="bottom") +
+#     labs(title=paste(StkList[i], "; Maturation Rates", sep = ""),
+#          subtitle = "Note: gray shaded area corresponds to base period brood years",
+#          y="Maturation Rate") +
+#     theme(plot.subtitle = element_text(size = 8, face = "italic"))
+# }
 
 
 # #---------- AEQ plots ----------#
@@ -536,18 +597,24 @@ for(i in 1:length(StkList)) {
 
 ## Results
 
-### Overall Summary Across Stocks {.tabset .tabset-fade .tabset-pills}
+### Overall Summary Across Regions {.tabset .tabset-fade .tabset-pills}
 
-#### Entire Time Series
+#### Puget Sound
 
 ```{r Ocean ER Box Plot1, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 plots_OceanER_Box[[1]]
 ```
 
-#### By Time Period
+#### Columbia River
 
 ```{r Ocean ER Box Plot2, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
 plots_OceanER_Box[[2]]
+```
+
+#### WA/OR Coast & Canada
+
+```{r Ocean ER Box Plot3, fig.width = 8, echo=FALSE, message=FALSE, warning=FALSE}
+plots_OceanER_Box[[3]]
 ```
 
 ### Individual Stock Results
@@ -563,12 +630,17 @@ for(i in 1:dim(stk_names)[1]) {
 	
 	tagtable <- BP_tagcodes[BP_tagcodes$StockID_FRAM == stk_names[i,1], c(2:6)]
   tagtable <- kable(tagtable, align = 'ccccc', row.names = F) %>%
-    kable_styling(full_width = F, bootstrap_options = c("striped", "hover"))
+    kable_styling(full_width = F, bootstrap_options = c("striped", "hover")) %>%
+    scroll_box(width = "100%", height = "300px", fixed_thead = TRUE)
   print(tagtable)
   	
 	cat('  \n')
 	
 	print(plots_OceanER_Line[[i]])
+	
+	cat('  \n')
+	
+	print(plots_OceanER_Scatter[[i]])
 	
 	cat('  \n')
 	
@@ -585,5 +657,47 @@ for(i in 1:dim(stk_names)[1]) {
 	# cat('  \n')
 
  }
+```
+
+
+### Upon further investigation...
+
+#### Puget Sound stocks with inadequate freshwater sport sampling
+
+While freshwater sport fisheries have consistently occured in some Puget Sound rivers, the level of CWT sampling in these fisheries has been inadequate or nonexistent in most years.
+
+```{r Generate FRAM_adj_ER Plots, warning=FALSE, include=FALSE}
+
+
+#---------- Ocean ER line graphs ----------#
+plots_OceanERadj_Line <- list()
+StkList_adj <- StkList[c(1)]
+# ER_Ocean_long$Year <- as.integer(ER_Ocean_long$Year)
+
+for(i in 1:length(StkList_adj)) {
+  ER_Ocean_stk <- ER_Ocean_long[ER_Ocean_long$Stock_Name == StkList_adj[i], c(2:3,5:6)]
+  ER_Ocean_FRAMadj_stk <- FRAM_adj_ERs[FRAM_adj_ERs$Stock_Name == droplevels(StkList_adj[i]), ]
+  ER_Ocean_stk <- rbind(ER_Ocean_FRAMadj_stk, droplevels(ER_Ocean_stk))
+  
+  plots_OceanERadj_Line[[length(plots_OceanERadj_Line)+1]] <- ggplot(ER_Ocean_stk, aes(x=Year, y=ER, color=Source, fill=Source, shape=Source, group=Source)) +
+    annotate("rect", xmin = 2007, xmax = 2013, ymin = -Inf, ymax = Inf, alpha = 0.2) +
+    geom_line(size=1, alpha=.9) + geom_point(size=3, alpha=.9, color="gray40", stroke=1) +
+    scale_y_continuous(limits = c(0,NA)) +
+    theme_bw() + # make the panel background white
+    scale_shape_manual(name="", breaks=c("ER_ERA","ER_FRAM","ER_FRAM_adj"),
+                       values=c("ER_ERA"=23,"ER_FRAM"=21,"ER_FRAM_adj"=22)) +
+    scale_color_manual(name="", breaks=c("ER_ERA","ER_FRAM","ER_FRAM_adj"),
+                       values=c("ER_ERA"="#66CDAA", "ER_FRAM"="#56B4E9","ER_FRAM_adj"="#FF862F")) +
+    scale_fill_manual(name="", breaks=c("ER_ERA","ER_FRAM","ER_FRAM_adj"),
+                      values=c("ER_ERA"="#66CDAA", "ER_FRAM"="#56B4E9","ER_FRAM_adj"="#FF862F")) +
+    theme(legend.position="bottom") +
+    labs(title=paste(StkList[i], "; Ocean Exploitation Rates", sep = ""),
+         subtitle = "Note: gray shaded area corresponds to base period return years",
+         y="Ocean Exploitation Rate") +
+    theme(plot.subtitle = element_text(size = 8, face = "italic"))
+}
+```
+```{r Print FRAMadj figs, eval=TRUE, include=TRUE, echo = FALSE, results='asis', warning=FALSE}
+print(plots_OceanERadj_Line[[1]])
 ```
 
