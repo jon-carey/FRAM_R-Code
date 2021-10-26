@@ -14,28 +14,39 @@
 #       pulls Escapement table from a specified database, 
 #       option to specify runID, stock, age, timestep
 #
-# 4. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
+# 4. pull_MaturationRate(db_path, bpID): 
+#       pulls MaturationRate table from a specified database, 
+#       option to specify bpID
+#
+# 5. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
 #       pulls Mortality table from a specified database, 
 #       option to specify runID, stock, age, fishery, timestep
 #
-# 5. pull_RunID(db_path, runID): 
+# 6. pull_RunID(db_path, runID): 
 #       pulls RunID table from a specified database, 
 #       option to specify runID, stock, age, timestep
 #
-# 6. pull_TerminalFisheryFlag(db_path, bpID): 
+# 7. pull_TerminalFisheryFlag(db_path, bpID): 
 #       pulls TerminalFisheryFlag table from a 
 #       specified database, option to specify bpID
 #
-# 7. ZeroPS_SRKW(db_path, runID): 
+# 8. ZeroPS_SRKW(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs (with exception of 
 #       Hood Canal sport & net and 13A net), updates remaining ISBM
 #       fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 8. ZeroPS_SRKW(db_path, runID): 
+# 9. ZeroPS_SRKW_2021(db_path, runID): 
+#       zeros out all PS fishery and CNR inputs for fisheries relevant
+#       to SRKW analyses for PS fisheries, based on 2021 discussions 
+#       with PS comanagers (see 'FRAM Fishery Exclusions_rev9.30.21.xlsx').
+#       updates remaining ISBM fishery flags to scalers. 
+#       Can accomodate multiple runIDs.
+#
+# 10. ZeroPS(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs, updates remaining 
 #       ISBM fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 9. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
+# 11. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
 #       calculates SRFI values for a supplied list of RunIDs; requires a
 #       SRFI_BP_ER to be supplied, will output a csv to outfile
 #
@@ -187,6 +198,30 @@ pull_Escapement <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=
   close(con)
   
   return(Escapement[order(Escapement$RunID,Escapement$StockID,Escapement$Age,Escapement$TimeStep), ])
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to pull Maturation Rate table from a FRAM database
+pull_MaturationRate <- function(db_path, bpID) {
+  con = odbcConnectAccess(db_path)
+  
+  if(missing(bpID)) {
+    MatRate = sqlQuery(con, as.is = TRUE,
+                       paste(sep = '',
+                             "SELECT * FROM MaturationRate"))
+  } else {
+    bpID_string <- toString(sprintf("%s", bpID))
+    MatRate = sqlQuery(con, as.is = TRUE,
+                   paste(sep = '',
+                         "SELECT MaturationRate.* ",
+                         "FROM MaturationRate ",
+                         "WHERE (((MaturationRate.BasePeriodID) In (",bpID_string,")));"))
+  }
+  
+  close(con)
+  return(MatRate[order(MatRate$BasePeriodID,MatRate$StockID,MatRate$Age,MatRate$TimeStep), ])
 }
 #----------------------------------------------------------------------------#
 
@@ -347,6 +382,59 @@ ZeroPS_SRKW <- function(db_path, runID) {
            paste(sep = '',
                  "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
                  "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36 And (NonRetention.FisheryID) Not In (64,65,66,70,71)));"))
+  
+  close(con)
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to update a FRAM run for SRKW "Zero PS" based on results of 2021
+# comanager discussions
+
+ZeroPS_SRKW_2021 <- function(db_path, runID) {
+  con = odbcConnectAccess(db_path)
+  
+  runID_string <- toString(sprintf("%s", runID))
+  
+  # query to update remaining ISBM flags from 2 to 1
+  sqlQuery(con, as.is = TRUE,
+           paste(sep = '',
+                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 1 ",
+                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                 "AND ((FisheryScalers.FisheryFlag)=2) ",
+                 "AND ((FisheryScalers.FisheryID) Not In (1,2,3,8,9,10,11)));"))
+  
+  # query to update remaining ISBM flags from 8 to 7
+  sqlQuery(con, as.is = TRUE,
+           paste(sep = '',
+                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 7 ",
+                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                 "AND ((FisheryScalers.FisheryFlag)=8) ",
+                 "AND ((FisheryScalers.FisheryID) Not In (1,2,3,8,9,10,11)));"))
+  
+  # query to update remaining ISBM flags from 28 to 17
+  sqlQuery(con, as.is = TRUE,
+           paste(sep = '',
+                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 17 ",
+                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                 "AND ((FisheryScalers.FisheryFlag)=28) ",
+                 "AND ((FisheryScalers.FisheryID) Not In (1,2,3,8,9,10,11)));"))
+  
+  # query to zero out non-retention in PS fisheries
+  sqlQuery(con, as.is = TRUE,
+           paste(sep = '',
+                 "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
+                 "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36 And (NonRetention.FisheryID) Not In (48,51,52,60,61,62,63,64,65,66,68,69,70,71)));"))
+  
+  # query to zero out PS fisheries (with exception of 'A 12 Sport', 'NT HC Net', 'Tr HC Net', 'Tr HC Net', and 'Tr 13A Net')
+  sqlQuery(con, as.is = TRUE,
+           paste(sep = '',
+                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 2, FisheryScalers.Quota = 0 ",
+                 "WHERE ((FisheryScalers.RunID) In (",runID_string,") ",
+                 "AND ((FisheryScalers.TimeStep) In (1,4) AND ((FisheryScalers.FisheryID)=17 OR (FisheryScalers.FisheryID)>=36)) ",
+                 "OR ((FisheryScalers.TimeStep)=2 AND ((FisheryScalers.FisheryID)>=36 AND (FisheryScalers.FisheryID) Not In (48))) ",
+                 "OR ((FisheryScalers.TimeStep)=3 AND ((FisheryScalers.FisheryID)>=36 AND (FisheryScalers.FisheryID) Not In (48,51,52,60,61,62,63,64,65,66,68,69,70,71))));"))
   
   close(con)
 }
