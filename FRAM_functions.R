@@ -48,7 +48,12 @@
 #
 # 11. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
 #       calculates SRFI values for a supplied list of RunIDs; requires a
-#       SRFI_BP_ER to be supplied, will output a csv to outfile
+#       SRFI_BP_ER to be supplied, will output a csv to outfile.
+#
+# 12. calc_SRFI_BP_ER(db_path):
+#       calculates the SRFI base period ER (1988-1993) for the denominator
+#       in the SRFI calculation. Requires 'db_path' that refers to the
+#       relevant validation database. Returns a single value.
 #
 ##############################################################################
 
@@ -496,8 +501,8 @@ ZeroPS <- function(db_path, runID) {
 # Requires: db_path, series of RunIDs, SRFI_BP_ER, and an outfile path
 
 calc_SRFI <- function(db_path, runID, SRFI_BP_ER, outfile) {
-  SRFI_log <- data.frame(matrix(ncol = 3, nrow = length(runID)))
-  colnames(SRFI_log) <- c("RunID", "RunName", "SRFI")
+  SRFI_log <- data.frame(matrix(ncol = 5, nrow = length(runID)))
+  colnames(SRFI_log) <- c("RunID", "RunName", "SRFI_BP_ER", "SRFI_ER", "SRFI")
 
   for(j in 1:length(runID)) {
     run_id <- runID[j]
@@ -535,9 +540,9 @@ calc_SRFI <- function(db_path, runID, SRFI_BP_ER, outfile) {
     Escapement <- sum(Esc$Escapement)
     SRFI_ER <- Age_3_4_Mort / (Tot_AEQ_Mort + Escapement)
 
-    SRFI <- round(SRFI_ER / SRFI_BP_ER,4)
+    SRFI <- round(SRFI_ER / SRFI_BP_ER, 4)
 
-    SRFI_log_j <- c(run_id, RunID[RunID$RunID == run_id, 4], SRFI)
+    SRFI_log_j <- c(run_id, RunID[RunID$RunID == run_id, 4], SRFI_BP_ER, SRFI_ER, SRFI)
 
     SRFI_log[j, ] <- SRFI_log_j
   }
@@ -545,3 +550,61 @@ calc_SRFI <- function(db_path, runID, SRFI_BP_ER, outfile) {
   write.csv(SRFI_log, outfile)
   return(SRFI_log[order(SRFI_log$RunID), ])
 }
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to calculate SRFI base period ER (1988-1993)
+# Requires: db_path, series of RunIDs, SRFI_BP_ER, and an outfile path
+
+calc_SRFI_BP_ER <- function(db_path) {
+  run_IDs <- pull_RunID(db_path)
+  run_IDs <- run_IDs[run_IDs$RunYear >= 1988 & run_IDs$RunYear <= 1993, c(2,4,6,11)]
+  
+  SRFI_log <- data.frame(matrix(ncol = 3, nrow = length(run_IDs)))
+  colnames(SRFI_log) <- c("RunID", "Year", "SRFI_ER")
+  
+  for(i in 1:dim(run_IDs)[1]) {
+    run_id <- run_IDs$RunID[i]
+    
+    # pull necessary data from FRAM database
+    Esc <- pull_Escapement(db_path, run_id, stock = 54)
+    Mort <- pull_Mortality(db_path, run_id, stock = 54)
+    RunID <- pull_RunID(db_path)
+    bpID <- RunID[RunID$RunID == run_id, 6]
+    TermFlag <- pull_TerminalFisheryFlag(db_path, bpID)
+    AEQ <- pull_AEQ(db_path, bpID)
+    AEQ <- AEQ[AEQ$StockID == 54, ]
+    
+    # add terminal flag to mort table
+    Mort <- merge(Mort, TermFlag[ ,c(2:4)], all.x = TRUE)
+    Mort$TerminalFlag[is.na(Mort$TerminalFlag)] <- 0
+    
+    # add AEQ
+    Mort <- merge(Mort, AEQ[ ,c(2:5)], all.x = TRUE)
+    
+    # if terminal, set AEQ to 1
+    for(j in 1:dim(Mort)[1]) {
+      if(Mort$TerminalFlag[j] == 1) {
+        Mort$AEQ[j] <- 1 
+      }
+    }
+    
+    # sum total mort and AEQ mort
+    Mort$Tot_Mort <- rowSums(Mort[ ,c(7:10,12:15)])
+    Mort$AEQ_Mort <- Mort$Tot_Mort * Mort$AEQ
+    
+    Age_3_4_Mort <- sum(Mort[Mort$Age %in% c(3,4) & Mort$TimeStep %in% c(1:3), 20])
+    Tot_AEQ_Mort <- sum(Mort[ , 20])
+    Escapement <- sum(Esc$Escapement)
+    SRFI_ER <- Age_3_4_Mort / (Tot_AEQ_Mort + Escapement)
+    
+    # record values
+    SRFI_log_i <- c(run_id, run_IDs[i,4], SRFI_ER)
+    SRFI_log[i, ] <- SRFI_log_i
+  }
+  
+  return(mean(as.numeric(SRFI_log$SRFI_ER)))
+}
+#----------------------------------------------------------------------------#
+
