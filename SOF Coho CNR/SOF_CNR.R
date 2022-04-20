@@ -43,18 +43,18 @@ library(svDialogs); library(doBy)
 library(reshape)
 
 # Set directory
-dir <- "C:\\Users\\jonathan.carey\\Documents\\PFMC\\STT\\2018\\Hoopa Litigation\\CNR Methodology\\Preseason comparison\\"
+dir <- "C:\\Users\\jonathan.carey\\Documents\\PFMC\\STT\\2020\\Forecasts\\Coho\\OPITT\\bkFRAM_2019post\\"
 
 # Set paths
-paths = list(paste(dir, "SOF_CNR_R_In_Coho1731.xlsx", sep = ""),
-             paste(dir, "KOHM.output.effort.2017.final.txt", sep = ""),
-             paste(dir, "2013-19 Coho Preseason.mdb", sep = ""))
+paths = list(paste(dir, "SOF_CNR_R_In_2019post.xlsx", sep = ""),
+             paste(dir, "2019post_KOHM.effort.txt", sep = ""),
+             paste(dir, "bk2019_OPITT.mdb", sep = ""))
 
 # Set RunID
-RunID <- 12
+RunID <- 451
 
 # Effot estimate for Brookings Sport in October (from Craig)
-Oct_Brook_Spt <- 2721
+Oct_Brook_Spt <- 0
 
 # Get Run Name from RunID table in database
 con <- odbcConnectAccess(paths[[3]])
