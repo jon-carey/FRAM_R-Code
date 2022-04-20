@@ -630,6 +630,44 @@ for(i in 1:length(StkList)) {
 # }
 ```
 
+```{r}
+ER_Ocean2 <- ER_Ocean
+ER_Ocean2$PercentError <- (ER_Ocean2$ER_FRAM - ER_Ocean2$ER_ERA) / ER_Ocean2$ER_ERA
+ER_Ocean2$FRAM_ERA <- ER_Ocean2$ER_FRAM / ER_Ocean2$ER_ERA
+ER_Ocean2$LN_FRAM_ERA <- log(ER_Ocean2$ER_FRAM / ER_Ocean2$ER_ERA)
+ER_Ocean2 <- ER_Ocean2[is.na(ER_Ocean2$LN_FRAM_ERA) == FALSE, ]
+
+ER_Ocean3 <- summaryBy(PercentError+FRAM_ERA+LN_FRAM_ERA~Stock_Name, data = ER_Ocean2, FUN = c(length,median,mean,sd))
+ER_Ocean3$fitted <- exp(ER_Ocean3$LN_FRAM_ERA.mean)
+ER_Ocean3$lower <- exp(ER_Ocean3$LN_FRAM_ERA.mean - 1.96 * ER_Ocean3$LN_FRAM_ERA.sd / sqrt(ER_Ocean3$LN_FRAM_ERA.length))
+ER_Ocean3$upper <- exp(ER_Ocean3$LN_FRAM_ERA.mean + 1.96 * ER_Ocean3$LN_FRAM_ERA.sd / sqrt(ER_Ocean3$LN_FRAM_ERA.length))
+ER_Ocean3 <- ER_Ocean3[ ,c(1:2,8,6,14,13,15:16)]
+ER_Ocean3[,c(3:8)] <- round(ER_Ocean3[,c(3:8)],3)
+ER_Ocean3 <- merge(unique(stk_info[ ,c(1:2)]), ER_Ocean3)
+ER_Ocean3 <- ER_Ocean3[order(ER_Ocean3$Stock_Num), ]
+ER_Ocean3$Stock_Name <- factor(ER_Ocean3$Stock_Name, levels = stk_names$Stock_Name)
+
+ER_Ocean3 <- ER_Ocean3[ ,c(1,3:9)]
+colnames(ER_Ocean3) <- c("Stock", "n", "MPE", "median(FRAM/ERA)", "fitted_median", "sigma", "lowerBound", "upperBound")
+
+
+ggplot(ER_Ocean3, aes(x = Stock, y = fitted_median)) + 
+  geom_errorbar(aes(ymin = lowerBound, ymax = upperBound), width = 0.2) +
+  geom_point(size = 3.5, shape = 21, fill = "steelblue") +
+  geom_hline(yintercept = 1, linetype = "dashed", size = 0.5) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+# 
+# h1 <- ggplot(ER_Ocean2, aes(x = LN_FRAM_ERA)) + geom_histogram(color="white", fill="steelblue")
+# h2 <- ggplot(ER_Ocean2, aes(x = LN_FRAM_ERA)) + geom_histogram(color="white", fill="steelblue") +
+#   facet_wrap(~Stock_Name)
+# h1
+# h2
+
+```
+
+
 ## Results
 
 ### Overall Summary Across Stocks

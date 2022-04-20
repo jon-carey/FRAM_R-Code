@@ -65,7 +65,7 @@ StockID,ProductionRegionNumber,ManagementUnitNumber,StockName,StockLongName,FigI
 64,11,10,M-LwGeo S,Marked Lower Georgia Strait,0
 65,4,21,U-WhtSpYr,UnMarked White River Spring Year,0
 66,4,22,M-WhtSpYr,Marked White River Spring Year,0
-67,8,37,U-LColNat,UnMarked Lower Columbia Naturals,0
+67,8,37,U-LColNat,UnMarked Lower Columbia Naturals,1
 68,8,38,M-LColNat,Marked Lower Columbia Naturals,0
 69,10,1,U-CentVal,UnMarked Central Valley Fall,0
 70,10,2,M-CentVal,Marked Central Valley Fall,0
