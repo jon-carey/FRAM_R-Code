@@ -32,8 +32,6 @@ rm(list=ls(all=TRUE))
 # set start time for purposes of timing code
 strt <- Sys.time()
 
-# install.packages("xlsx")
-
 # Load required libraries
 library(RODBC)
 library(readxl)
@@ -48,17 +46,17 @@ RoundFlag = 0 # 0=No, 1=Yes
 AbundType = 0 # 0=Yes, 1=No
 
 # Set Excel Output file name
-outfile_name = "SRKW_ColRHatInc15_6.25.18.xlsx"
+outfile_name = "SRKW_2017_Rnd5_ZeroPS; 12.20.17.xlsx"
 
 # Set the paths:
 #   1 = Excel input file
 #   2 = FRAM db for 1st set of model runs (links to Col B in 'R_In_RunID' tab of above file)
 #   3 = FRAM db for 2nd set of model runs (links to Col C in 'R_In_RunID' tab of above file)
 #   4 = Output directory
-paths = list("G:\\WDFW\\Documents\\FRAM\\SRKW\\R_In\\SRKW_Inputs_6.25.18; ColR_Hat_Inc_15.xlsx",
-             "G:\\WDFW\\Documents\\FRAM\\SRKW\\R_In\\Valid2016_NewBP.mdb",
-             "G:\\WDFW\\Documents\\FRAM\\SRKW\\R_In\\Valid2016_NewBP - ColR_Hat_Inc_15.mdb",
-             "G:\\WDFW\\Documents\\FRAM\\SRKW\\R_Out\\Output Datasets\\2018.6.25 - Hat Enhancement\\")
+paths = list("C:\\data\\FRAM\\SRKW\\R_In\\SRKW_Inputs_12.20.17; 2017Rnd5_ZeroPS.xlsx",
+             "C:\\data\\FRAM\\SRKW\\R_In\\2017 Pre - New RMP\\Pre Season Runs with Round 5.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_In\\2017 Pre - New RMP\\Pre Season Runs with Round 5.mdb",
+             "C:\\data\\FRAM\\SRKW\\R_Out\\")
 
 # Set the input file path for the database containing FRAM runs
 DBpath1 = paths[[2]]
@@ -121,7 +119,6 @@ close(con)
 # Trim to necessary RunID and make sure they are not the same for each set of runs
 RunName1 <- colnames(RunIDs)[2]
 RunName2 <- colnames(RunIDs)[3]
-OrderChk1 <- c(RunName1,RunName2)
 
 Cohort78_1 <- subset(Cohort78_1, RunID %in% unname(unlist(RunIDs[,2])))
 Cohort78_1$RunID <- paste(RunName1, "_", Cohort78_1$RunID, sep = "")
@@ -337,9 +334,6 @@ Age3to5Chin_Coastal <- summaryBy(Coastal_Abundance~Year+Run+TimeStep,
                                         FUN = sum)
 Age3to5Chin_Coastal <- reshape(Age3to5Chin_Coastal, idvar = c("Year","Run"), 
                                       timevar = "TimeStep", direction = "wide")
-if(order(OrderChk1)[1] == 2) {
-  Age3to5Chin_Coastal <- Age3to5Chin_Coastal[order(Age3to5Chin_Coastal$Run, decreasing = TRUE), ]
-}
 Age3to5Chin_Coastal <- reshape(Age3to5Chin_Coastal, idvar = "Year", 
                                       timevar = "Run", direction = "wide")
 Age3to5Chin_Coastal[ ,c(2:7)] <- round(Age3to5Chin_Coastal[ ,c(2:7)], 0)
@@ -350,9 +344,6 @@ Kilos_Coastal <- summaryBy(Coastal_kCal~Year+Run+TimeStep,
                           data = AvailablePrey[AvailablePrey$Age > 2 & AvailablePrey$TimeStep < 4, ], FUN = sum)
 Kilos_Coastal <- reshape(Kilos_Coastal, idvar = c("Year","Run"), 
                                 timevar = "TimeStep", direction = "wide")
-if(order(OrderChk1)[1] == 2) {
-  Kilos_Coastal <- Kilos_Coastal[order(Kilos_Coastal$Run, decreasing = TRUE), ]
-}
 Kilos_Coastal <- reshape(Kilos_Coastal, idvar = "Year", timevar = "Run",
                                 direction = "wide")
 colnames(Kilos_Coastal)[2:7] <- c("T1","T2","T3","T1 ","T2 ","T3 ")
@@ -363,9 +354,6 @@ Age3to5Chin_Inland <- summaryBy(Inland_Abundance~Year+Run+TimeStep,
                                 data = AvailablePrey[AvailablePrey$Age > 2 & AvailablePrey$TimeStep < 4, ], FUN = sum)
 Age3to5Chin_Inland <- reshape(Age3to5Chin_Inland, idvar = c("Year","Run"), 
                               timevar = "TimeStep", direction = "wide")
-if(order(OrderChk1)[1] == 2) {
-  Age3to5Chin_Inland <- Age3to5Chin_Inland[order(Age3to5Chin_Inland$Run, decreasing = TRUE), ]
-}
 Age3to5Chin_Inland <- reshape(Age3to5Chin_Inland, idvar = "Year", timevar = "Run", 
                               direction = "wide")
 colnames(Age3to5Chin_Inland)[2:7] <- c("T1","T2","T3","T1 ","T2 ","T3 ")
@@ -375,9 +363,6 @@ Kilos_Inland <- summaryBy(Inland_kCal~Year+Run+TimeStep,
                           data = AvailablePrey[AvailablePrey$Age > 2 & AvailablePrey$TimeStep < 4, ], FUN = sum)
 Kilos_Inland <- reshape(Kilos_Inland, idvar = c("Year","Run"), timevar = "TimeStep",
                         direction = "wide")
-if(order(OrderChk1)[1] == 2) {
-  Kilos_Inland <- Kilos_Inland[order(Kilos_Inland$Run, decreasing = TRUE), ]
-}
 Kilos_Inland <- reshape(Kilos_Inland, idvar = "Year", timevar = "Run", 
                         direction = "wide")
 colnames(Kilos_Inland)[2:7] <- c("T1","T2","T3","T1 ","T2 ","T3 ")
