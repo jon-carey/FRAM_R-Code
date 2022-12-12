@@ -96,6 +96,7 @@ pull_AEQ <- function(db_path, bpID) {
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     AEQ = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -133,6 +134,7 @@ pull_BackwardsFRAM <- function(db_path, runID) {
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     bkFRAM = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -208,6 +210,7 @@ pull_Cohort <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=NULL
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     Cohort = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -283,6 +286,7 @@ pull_Escapement <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     Escapement = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -313,6 +317,7 @@ pull_Fishery <- function(db_path, VersionNumber=1) {
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     FishID = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -385,6 +390,7 @@ pull_FisheryScalers <- function(db_path, runID=NULL, fishery=NULL, timestep=NULL
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     FishScalers = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -422,6 +428,7 @@ pull_MaturationRate <- function(db_path, bpID) {
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     MatRate = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -500,6 +507,7 @@ pull_Mortality <- function(db_path, runID=NULL, stock=NULL, age=NULL, fishery=NU
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     Mort = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -537,6 +545,7 @@ pull_RunID <- function(db_path, runID) {
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     RunID = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -574,6 +583,7 @@ pull_TerminalFisheryFlag <- function(db_path, bpID) {
     driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
     chnl = dbConnect(odbc(), .connection_string = driverName)
     TermFlag = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -640,6 +650,7 @@ ZeroPS_SRKW <- function(db_path, runID) {
     dbGetQuery(chnl, qry3)
     dbGetQuery(chnl, qry4)
     dbGetQuery(chnl, qry5)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -710,6 +721,7 @@ ZeroPS_SRKW_2021 <- function(db_path, runID) {
     dbGetQuery(chnl, qry3)
     dbGetQuery(chnl, qry4)
     dbGetQuery(chnl, qry5)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
@@ -777,6 +789,7 @@ ZeroPS <- function(db_path, runID) {
     dbGetQuery(chnl, qry3)
     dbGetQuery(chnl, qry4)
     dbGetQuery(chnl, qry5)
+    dbDisconnect(chnl)
     
   } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
     
