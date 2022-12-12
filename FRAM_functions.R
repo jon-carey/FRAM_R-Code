@@ -71,28 +71,42 @@
 
 # required packages
 library(RODBC)
+library(odbc)
 library(doBy)
 
 #----------------------------------------------------------------------------#
 # Function to pull AEQ table from a FRAM database
 pull_AEQ <- function(db_path, bpID) {
-  con = odbcConnectAccess(db_path)
   
+  # set up query
   if(missing(bpID)) {
-    AEQ = sqlQuery(con, as.is = TRUE,
-                     paste(sep = '',
-                           "SELECT * FROM AEQ"))
+    qry = paste(sep = '',
+                "SELECT * FROM AEQ")
   } else {
     bpID_string <- toString(sprintf("%s", bpID))
-    AEQ = sqlQuery(con, as.is = TRUE,
-                     paste(sep = '',
-                           "SELECT AEQ.* ",
-                           "FROM AEQ ",
-                           "WHERE (((AEQ.BasePeriodID) In (",bpID_string,")));"))
+    qry = paste(sep = '',
+                "SELECT AEQ.* ",
+                "FROM AEQ ",
+                "WHERE (((AEQ.BasePeriodID) In (",bpID_string,")));")
   }
   
-  close(con)
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    AEQ = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    AEQ = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
   return(AEQ[order(AEQ$BasePeriodID,AEQ$StockID,AEQ$Age,AEQ$TimeStep), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -100,23 +114,36 @@ pull_AEQ <- function(db_path, bpID) {
 #----------------------------------------------------------------------------#
 # Function to pull BackwardsFRAM table from a FRAM database
 pull_BackwardsFRAM <- function(db_path, runID) {
-  con = odbcConnectAccess(db_path)
   
+  # set up query
   if(missing(runID)) {
-    bkFRAM = sqlQuery(con, as.is = TRUE,
-                     paste(sep = '',
-                           "SELECT * FROM BackwardsFRAM"))
+    qry = paste(sep = '',
+                "SELECT * FROM BackwardsFRAM")
   } else {
     runID_string <- toString(sprintf("%s", runID))
-    bkFRAM = sqlQuery(con, as.is = TRUE,
-                     paste(sep = '',
-                           "SELECT BackwardsFRAM.* ",
-                           "FROM BackwardsFRAM ",
-                           "WHERE (((BackwardsFRAM.RunID) In (",runID_string,")));"))
+    qry = paste(sep = '',
+                "SELECT BackwardsFRAM.* ",
+                "FROM BackwardsFRAM ",
+                "WHERE (((BackwardsFRAM.RunID) In (",runID_string,")));")
   }
   
-  close(con)
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    bkFRAM = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    bkFRAM = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
   return(bkFRAM[order(bkFRAM$RunID), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -124,6 +151,8 @@ pull_BackwardsFRAM <- function(db_path, runID) {
 #----------------------------------------------------------------------------#
 # Function to pull Cohort table from a FRAM database
 pull_Cohort <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=NULL) {
+  
+  # determine which arguments are provided
   x <- list()
   if(is.null(runID) == FALSE) {
     x[["RunID"]] <- runID
@@ -138,20 +167,18 @@ pull_Cohort <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=NULL
     x[["TimeStep"]] <- timestep
   }
   
-  con = odbcConnectAccess(db_path)
+  # set up query
   if(length(x) == 0) {
-    Cohort <- sqlQuery(con, as.is = TRUE,
-                       paste(sep = '',
-                             "SELECT * FROM Cohort"))
+    qry <- paste(sep = '',
+                 "SELECT * FROM Cohort")
   }
   
   if(length(x) == 1) {
     x1_string <- toString(sprintf("%s", x[[1]]))
-    Cohort = sqlQuery(con, as.is = TRUE,
-                      paste(sep = '',
-                            "SELECT Cohort.* ",
-                            "FROM Cohort ",
-                            "WHERE (((Cohort.",names(x[1]),") In (",x1_string,")));"))
+    qry = paste(sep = '',
+                "SELECT Cohort.* ",
+                "FROM Cohort ",
+                "WHERE (((Cohort.",names(x[1]),") In (",x1_string,")));")
   }
   
   if(length(x) > 1) {
@@ -168,16 +195,30 @@ pull_Cohort <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=NULL
       }
     }
     
-    Cohort = sqlQuery(con, as.is = TRUE,
-                      paste(sep = '',
-                            "SELECT Cohort.* ",
-                            "FROM Cohort ",
-                            where_clause,
-                            and_clause,");"))
+    qry = paste(sep = '',
+                "SELECT Cohort.* ",
+                "FROM Cohort ",
+                where_clause,
+                and_clause,");")
   }
-  close(con)
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    Cohort = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    Cohort = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
   
   return(Cohort[order(Cohort$RunID,Cohort$StockID,Cohort$Age,Cohort$TimeStep), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -185,6 +226,8 @@ pull_Cohort <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=NULL
 #----------------------------------------------------------------------------#
 # Function to pull Escapement table from a FRAM database
 pull_Escapement <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=NULL) {
+  
+  # determine which arguments are provided
   x <- list()
   if(is.null(runID) == FALSE) {
     x[["RunID"]] <- runID
@@ -199,20 +242,18 @@ pull_Escapement <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=
     x[["TimeStep"]] <- timestep
   }
   
-  con = odbcConnectAccess(db_path)
+  # set up query
   if(length(x) == 0) {
-    Escapement <- sqlQuery(con, as.is = TRUE,
-                           paste(sep = '',
-                                 "SELECT * FROM Escapement"))
+    qry <- paste(sep = '',
+                 "SELECT * FROM Escapement")
   }
   
   if(length(x) == 1) {
     x1_string <- toString(sprintf("%s", x[[1]]))
-    Escapement = sqlQuery(con, as.is = TRUE,
-                          paste(sep = '',
-                                "SELECT Escapement.* ",
-                                "FROM Escapement ",
-                                "WHERE (((Escapement.",names(x[1]),") In (",x1_string,")));"))
+    qry = paste(sep = '',
+                "SELECT Escapement.* ",
+                "FROM Escapement ",
+                "WHERE (((Escapement.",names(x[1]),") In (",x1_string,")));")
   }
   
   if(length(x) > 1) {
@@ -229,16 +270,30 @@ pull_Escapement <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=
       }
     }
     
-    Escapement = sqlQuery(con, as.is = TRUE,
-                          paste(sep = '',
-                                "SELECT Escapement.* ",
-                                "FROM Escapement ",
-                                where_clause,
-                                and_clause,");"))
+    qry = paste(sep = '',
+                "SELECT Escapement.* ",
+                "FROM Escapement ",
+                where_clause,
+                and_clause,");")
   }
-  close(con)
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    Escapement = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    Escapement = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
   
   return(Escapement[order(Escapement$RunID,Escapement$StockID,Escapement$Age,Escapement$TimeStep), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -246,15 +301,29 @@ pull_Escapement <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=
 #----------------------------------------------------------------------------#
 # Function to pull Fishery table from a FRAM database
 pull_Fishery <- function(db_path, VersionNumber=1) {
-  con = odbcConnectAccess(db_path)
   
-  FishID = sqlQuery(con, as.is = TRUE,
-                    paste0("SELECT Fishery.* ",
-                           "FROM Fishery ",
-                           "WHERE (((Fishery.VersionNumber) = ",VersionNumber,"));"))
+  # set up query
+  qry <- paste0("SELECT Fishery.* ",
+                "FROM Fishery ",
+                "WHERE (((Fishery.VersionNumber) = ",VersionNumber,"));")
   
-  close(con)
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    FishID = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    FishID = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
   return(FishID[order(FishID$FisheryID), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -262,6 +331,8 @@ pull_Fishery <- function(db_path, VersionNumber=1) {
 #----------------------------------------------------------------------------#
 # Function to pull FisheryScalers table from a FRAM database
 pull_FisheryScalers <- function(db_path, runID=NULL, fishery=NULL, timestep=NULL) {
+  
+  # determine which arguments are provided
   x <- list()
   if(is.null(runID) == FALSE) {
     x[["RunID"]] <- runID
@@ -273,20 +344,18 @@ pull_FisheryScalers <- function(db_path, runID=NULL, fishery=NULL, timestep=NULL
     x[["TimeStep"]] <- timestep
   }
   
-  con = odbcConnectAccess(db_path)
+  # set up query
   if(length(x) == 0) {
-    FishScalers <- sqlQuery(con, as.is = TRUE,
-                     paste(sep = '',
-                           "SELECT * FROM FisheryScalers"))
+    qry <- paste(sep = '',
+                 "SELECT * FROM FisheryScalers")
   }
   
   if(length(x) == 1) {
     x1_string <- toString(sprintf("%s", x[[1]]))
-    FishScalers = sqlQuery(con, as.is = TRUE,
-                    paste(sep = '',
-                          "SELECT FisheryScalers.* ",
-                          "FROM FisheryScalers ",
-                          "WHERE (((FisheryScalers.",names(x[1]),") In (",x1_string,")));"))
+    qry = paste(sep = '',
+                "SELECT FisheryScalers.* ",
+                "FROM FisheryScalers ",
+                "WHERE (((FisheryScalers.",names(x[1]),") In (",x1_string,")));")
   }
   
   if(length(x) > 1) {
@@ -303,16 +372,30 @@ pull_FisheryScalers <- function(db_path, runID=NULL, fishery=NULL, timestep=NULL
       }
     }
     
-    FishScalers = sqlQuery(con, as.is = TRUE,
-                    paste(sep = '',
-                          "SELECT FisheryScalers.* ",
-                          "FROM FisheryScalers ",
-                          where_clause,
-                          and_clause,");"))
+    qry = paste(sep = '',
+                "SELECT FisheryScalers.* ",
+                "FROM FisheryScalers ",
+                where_clause,
+                and_clause,");")
   }
-  close(con)
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    FishScalers = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    FishScalers = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
   
   return(FishScalers[order(FishScalers$RunID,FishScalers$FisheryID,FishScalers$TimeStep), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -320,23 +403,36 @@ pull_FisheryScalers <- function(db_path, runID=NULL, fishery=NULL, timestep=NULL
 #----------------------------------------------------------------------------#
 # Function to pull Maturation Rate table from a FRAM database
 pull_MaturationRate <- function(db_path, bpID) {
-  con = odbcConnectAccess(db_path)
   
+  # set up query
   if(missing(bpID)) {
-    MatRate = sqlQuery(con, as.is = TRUE,
-                       paste(sep = '',
-                             "SELECT * FROM MaturationRate"))
+    qry = paste(sep = '',
+                "SELECT * FROM MaturationRate")
   } else {
     bpID_string <- toString(sprintf("%s", bpID))
-    MatRate = sqlQuery(con, as.is = TRUE,
-                   paste(sep = '',
-                         "SELECT MaturationRate.* ",
-                         "FROM MaturationRate ",
-                         "WHERE (((MaturationRate.BasePeriodID) In (",bpID_string,")));"))
+    qry = paste(sep = '',
+                "SELECT MaturationRate.* ",
+                "FROM MaturationRate ",
+                "WHERE (((MaturationRate.BasePeriodID) In (",bpID_string,")));")
   }
   
-  close(con)
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    MatRate = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    MatRate = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
   return(MatRate[order(MatRate$BasePeriodID,MatRate$StockID,MatRate$Age,MatRate$TimeStep), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -344,6 +440,8 @@ pull_MaturationRate <- function(db_path, bpID) {
 #----------------------------------------------------------------------------#
 # Function to pull Mortality table from a FRAM database
 pull_Mortality <- function(db_path, runID=NULL, stock=NULL, age=NULL, fishery=NULL, timestep=NULL) {
+  
+  # determine which arguments are provided
   x <- list()
   if(is.null(runID) == FALSE) {
     x[["RunID"]] <- runID
@@ -361,20 +459,18 @@ pull_Mortality <- function(db_path, runID=NULL, stock=NULL, age=NULL, fishery=NU
     x[["TimeStep"]] <- timestep
   }
   
-  con = odbcConnectAccess(db_path)
+  # set up query
   if(length(x) == 0) {
-    Mort <- sqlQuery(con, as.is = TRUE,
-                     paste(sep = '',
-                           "SELECT * FROM Mortality"))
+    qry <- paste(sep = '',
+                 "SELECT * FROM Mortality")
   }
   
   if(length(x) == 1) {
     x1_string <- toString(sprintf("%s", x[[1]]))
-    Mort = sqlQuery(con, as.is = TRUE,
-                    paste(sep = '',
-                          "SELECT Mortality.* ",
-                          "FROM Mortality ",
-                          "WHERE (((Mortality.",names(x[1]),") In (",x1_string,")));"))
+    qry = paste(sep = '',
+                "SELECT Mortality.* ",
+                "FROM Mortality ",
+                "WHERE (((Mortality.",names(x[1]),") In (",x1_string,")));")
   }
   
   if(length(x) > 1) {
@@ -391,16 +487,30 @@ pull_Mortality <- function(db_path, runID=NULL, stock=NULL, age=NULL, fishery=NU
       }
     }
     
-    Mort = sqlQuery(con, as.is = TRUE,
-                    paste(sep = '',
-                          "SELECT Mortality.* ",
-                          "FROM Mortality ",
-                          where_clause,
-                          and_clause,");"))
+    qry = paste(sep = '',
+                "SELECT Mortality.* ",
+                "FROM Mortality ",
+                where_clause,
+                and_clause,");")
   }
-  close(con)
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    Mort = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    Mort = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
   
   return(Mort[order(Mort$RunID,Mort$StockID,Mort$Age,Mort$FisheryID,Mort$TimeStep), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -408,23 +518,36 @@ pull_Mortality <- function(db_path, runID=NULL, stock=NULL, age=NULL, fishery=NU
 #----------------------------------------------------------------------------#
 # Function to pull RunID table from a FRAM database
 pull_RunID <- function(db_path, runID) {
-  con = odbcConnectAccess(db_path)
   
+  # set up query
   if(missing(runID)) {
-    RunID = sqlQuery(con, as.is = TRUE,
-                     paste(sep = '',
-                           "SELECT * FROM RunID"))
+    qry = paste(sep = '',
+                "SELECT * FROM RunID")
   } else {
     runID_string <- toString(sprintf("%s", runID))
-    RunID = sqlQuery(con, as.is = TRUE,
-                     paste(sep = '',
-                           "SELECT RunID.* ",
-                           "FROM RunID ",
-                           "WHERE (((RunID.RunID) In (",runID_string,")));"))
+    qry = paste(sep = '',
+                "SELECT RunID.* ",
+                "FROM RunID ",
+                "WHERE (((RunID.RunID) In (",runID_string,")));")
   }
   
-  close(con)
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    RunID = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    RunID = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
   return(RunID[order(RunID$RunID), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -432,23 +555,36 @@ pull_RunID <- function(db_path, runID) {
 #----------------------------------------------------------------------------#
 # Function to pull TerminalFisheryFlag table from a FRAM database
 pull_TerminalFisheryFlag <- function(db_path, bpID) {
-  con = odbcConnectAccess(db_path)
   
+  # set up query
   if(missing(bpID)) {
-    TermFlag = sqlQuery(con, as.is = TRUE,
-                   paste(sep = '',
-                         "SELECT * FROM TerminalFisheryFlag"))
+    qry = paste(sep = '',
+                "SELECT * FROM TerminalFisheryFlag")
   } else {
     bpID_string <- toString(sprintf("%s", bpID))
-    TermFlag = sqlQuery(con, as.is = TRUE,
-                   paste(sep = '',
-                         "SELECT TerminalFisheryFlag.* ",
-                         "FROM TerminalFisheryFlag ",
-                         "WHERE (((TerminalFisheryFlag.BasePeriodID) In (",bpID_string,")));"))
+    qry = paste(sep = '',
+                "SELECT TerminalFisheryFlag.* ",
+                "FROM TerminalFisheryFlag ",
+                "WHERE (((TerminalFisheryFlag.BasePeriodID) In (",bpID_string,")));")
   }
   
-  close(con)
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    TermFlag = dbGetQuery(chnl, qry)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    TermFlag = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
   return(TermFlag[order(TermFlag$BasePeriodID,TermFlag$FisheryID,TermFlag$TimeStep), ])
+  
 }
 #----------------------------------------------------------------------------#
 
@@ -457,48 +593,65 @@ pull_TerminalFisheryFlag <- function(db_path, bpID) {
 # Function to update a FRAM run for SRKW "Zero PS"
 
 ZeroPS_SRKW <- function(db_path, runID) {
-  con = odbcConnectAccess(db_path)
   
   runID_string <- toString(sprintf("%s", runID))
   
+  # set up queries-------------------------------------------
   # query to zero out PS fisheries (with exception of 'A 12 Sport', 'NT HC Net', 'Tr HC Net', 'Tr HC Net', and 'Tr 13A Net')
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 2, FisheryScalers.Quota = 0 ",
-                 "WHERE (((FisheryScalers.FisheryID)>=36 And (FisheryScalers.FisheryID) Not In (64,65,66,70,71)) AND ((FisheryScalers.RunID) In (",runID_string,"))) ",
-                 "OR (((FisheryScalers.FisheryID)=17) AND ((FisheryScalers.RunID) In (",runID_string,")) AND ((FisheryScalers.TimeStep) In (1,4)));"))
+  qry1 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 2, FisheryScalers.Quota = 0 ",
+                "WHERE (((FisheryScalers.FisheryID)>=36 And (FisheryScalers.FisheryID) Not In (64,65,66,70,71)) AND ((FisheryScalers.RunID) In (",runID_string,"))) ",
+                "OR (((FisheryScalers.FisheryID)=17) AND ((FisheryScalers.RunID) In (",runID_string,")) AND ((FisheryScalers.TimeStep) In (1,4)));")
   
   # query to update remaining ISBM flags from 2 to 1
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 1 ",
-                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
-                 "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,64,65,66,70,71)) ",
-                 "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=2));"))
+  qry2 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 1 ",
+                "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,64,65,66,70,71)) ",
+                "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=2));")
   
   # query to update remaining ISBM flags from 8 to 7
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 7 ",
-                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
-                 "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,64,65,66,70,71)) ",
-                 "OR ((FisheryScalers.FisheryID)=17 AND (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=8));"))
+  qry3 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 7 ",
+                "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,64,65,66,70,71)) ",
+                "OR ((FisheryScalers.FisheryID)=17 AND (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=8));")
   
   # query to update remaining ISBM flags from 28 to 17
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 17 ",
-                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
-                 "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,64,65,66,70,71)) ",
-                 "OR ((FisheryScalers.FisheryID)=17 AND (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=28));"))
+  qry4 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 17 ",
+                "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,64,65,66,70,71)) ",
+                "OR ((FisheryScalers.FisheryID)=17 AND (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=28));")
   
   # query to zero out non-retention in PS fisheries
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
-                 "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36 AND (NonRetention.FisheryID) Not In (64,65,66,70,71)));"))
+  qry5 <- paste(sep = '',
+                "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
+                "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36 AND (NonRetention.FisheryID) Not In (64,65,66,70,71)));")
   
-  close(con)
+  
+  # run queries-------------------------------------------
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    dbGetQuery(chnl, qry1)
+    dbGetQuery(chnl, qry2)
+    dbGetQuery(chnl, qry3)
+    dbGetQuery(chnl, qry4)
+    dbGetQuery(chnl, qry5)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    sqlQuery(con, as.is = TRUE, qry1)
+    sqlQuery(con, as.is = TRUE, qry2)
+    sqlQuery(con, as.is = TRUE, qry3)
+    sqlQuery(con, as.is = TRUE, qry4)
+    sqlQuery(con, as.is = TRUE, qry5)
+    close(con)
+    
+  }
 }
 #----------------------------------------------------------------------------#
 
@@ -508,50 +661,67 @@ ZeroPS_SRKW <- function(db_path, runID) {
 # comanager discussions
 
 ZeroPS_SRKW_2021 <- function(db_path, runID) {
-  con = odbcConnectAccess(db_path)
   
   runID_string <- toString(sprintf("%s", runID))
   
+  # set up queries-------------------------------------------
   # query to update remaining ISBM flags from 2 to 1
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 1 ",
-                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
-                 "AND ((FisheryScalers.FisheryFlag)=2) ",
-                 "AND ((FisheryScalers.FisheryID) Not In (1,2,3,8,9,10,11)));"))
+  qry1 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 1 ",
+                "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                "AND ((FisheryScalers.FisheryFlag)=2) ",
+                "AND ((FisheryScalers.FisheryID) Not In (1,2,3,8,9,10,11)));")
   
   # query to update remaining ISBM flags from 8 to 7
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 7 ",
-                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
-                 "AND ((FisheryScalers.FisheryFlag)=8) ",
-                 "AND ((FisheryScalers.FisheryID) Not In (1,2,3,8,9,10,11)));"))
+  qry2 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 7 ",
+                "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                "AND ((FisheryScalers.FisheryFlag)=8) ",
+                "AND ((FisheryScalers.FisheryID) Not In (1,2,3,8,9,10,11)));")
   
   # query to update remaining ISBM flags from 28 to 17
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 17 ",
-                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
-                 "AND ((FisheryScalers.FisheryFlag)=28) ",
-                 "AND ((FisheryScalers.FisheryID) Not In (1,2,3,8,9,10,11)));"))
+  qry3 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 17 ",
+                "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                "AND ((FisheryScalers.FisheryFlag)=28) ",
+                "AND ((FisheryScalers.FisheryID) Not In (1,2,3,8,9,10,11)));")
   
   # query to zero out non-retention in PS fisheries
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
-                 "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36 And (NonRetention.FisheryID) Not In (48,51,52,60,61,62,63,64,65,66,68,69,70,71)));"))
+  qry4 <- paste(sep = '',
+                "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
+                "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36 And (NonRetention.FisheryID) Not In (48,51,52,60,61,62,63,64,65,66,68,69,70,71)));")
   
   # query to zero out PS fisheries (with exception of terminal fisheries identified for exclusion from analysis - see "FRAM Fishery Exclusions_rev9.30.21.xlsx")
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 2, FisheryScalers.Quota = 0 ",
-                 "WHERE ((FisheryScalers.RunID) In (",runID_string,") ",
-                 "AND ((FisheryScalers.TimeStep) In (1,4) AND ((FisheryScalers.FisheryID)=17 OR (FisheryScalers.FisheryID)>=36)) ",
-                 "OR ((FisheryScalers.RunID) In (",runID_string,") AND (FisheryScalers.TimeStep)=2 AND ((FisheryScalers.FisheryID)>=36 AND (FisheryScalers.FisheryID) Not In (48))) ",
-                 "OR ((FisheryScalers.RunID) In (",runID_string,") AND (FisheryScalers.TimeStep)=3 AND ((FisheryScalers.FisheryID)>=36 AND (FisheryScalers.FisheryID) Not In (48,51,52,60,61,62,63,64,65,66,68,69,70,71))));"))
+  qry5 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 2, FisheryScalers.Quota = 0 ",
+                "WHERE ((FisheryScalers.RunID) In (",runID_string,") ",
+                "AND ((FisheryScalers.TimeStep) In (1,4) AND ((FisheryScalers.FisheryID)=17 OR (FisheryScalers.FisheryID)>=36)) ",
+                "OR ((FisheryScalers.RunID) In (",runID_string,") AND (FisheryScalers.TimeStep)=2 AND ((FisheryScalers.FisheryID)>=36 AND (FisheryScalers.FisheryID) Not In (48))) ",
+                "OR ((FisheryScalers.RunID) In (",runID_string,") AND (FisheryScalers.TimeStep)=3 AND ((FisheryScalers.FisheryID)>=36 AND (FisheryScalers.FisheryID) Not In (48,51,52,60,61,62,63,64,65,66,68,69,70,71))));")
   
-  close(con)
+  
+  # run queries-------------------------------------------
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    dbGetQuery(chnl, qry1)
+    dbGetQuery(chnl, qry2)
+    dbGetQuery(chnl, qry3)
+    dbGetQuery(chnl, qry4)
+    dbGetQuery(chnl, qry5)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    sqlQuery(con, as.is = TRUE, qry1)
+    sqlQuery(con, as.is = TRUE, qry2)
+    sqlQuery(con, as.is = TRUE, qry3)
+    sqlQuery(con, as.is = TRUE, qry4)
+    sqlQuery(con, as.is = TRUE, qry5)
+    close(con)
+    
+  }
 }
 #----------------------------------------------------------------------------#
 
@@ -560,48 +730,65 @@ ZeroPS_SRKW_2021 <- function(db_path, runID) {
 # Function to update a FRAM run for "Zero PS"
 
 ZeroPS <- function(db_path, runID) {
-  con = odbcConnectAccess(db_path)
   
   runID_string <- toString(sprintf("%s", runID))
   
+  # set up queries-------------------------------------------
   # query to zero out all PS fisheries
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 2, FisheryScalers.Quota = 0 ",
-                 "WHERE ((FisheryScalers.FisheryID)>=36 AND ((FisheryScalers.RunID) In (",runID_string,"))) ",
-                 "OR (((FisheryScalers.FisheryID)=17) AND ((FisheryScalers.RunID) In (",runID_string,")) AND ((FisheryScalers.TimeStep) In (1,4)));"))
+  qry1 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 2, FisheryScalers.Quota = 0 ",
+                "WHERE ((FisheryScalers.FisheryID)>=36 AND ((FisheryScalers.RunID) In (",runID_string,"))) ",
+                "OR (((FisheryScalers.FisheryID)=17) AND ((FisheryScalers.RunID) In (",runID_string,")) AND ((FisheryScalers.TimeStep) In (1,4)));")
   
   # query to update remaining ISBM flags from 2 to 1
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 1 ",
-                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
-                 "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)) ",
-                 "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=2));"))
+  qry2 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 1 ",
+                "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)) ",
+                "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=2));")
   
   # query to update remaining ISBM flags from 8 to 7
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 7 ",
-                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
-                 "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)) ",
-                 "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=8));"))
+  qry3 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 7 ",
+                "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)) ",
+                "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=8));")
   
   # query to update remaining ISBM flags from 28 to 17
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 17 ",
-                 "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
-                 "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)) ",
-                 "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=28));"))
+  qry4 <- paste(sep = '',
+                "UPDATE FisheryScalers SET FisheryScalers.FisheryFlag = 17 ",
+                "WHERE (((FisheryScalers.RunID) In (",runID_string,")) ",
+                "AND (((FisheryScalers.FisheryID) In (4,5,6,7,12,13,14,15,16,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35)) ",
+                "OR ((FisheryScalers.FisheryID)=17 And (FisheryScalers.TimeStep) In (2,3))) AND ((FisheryScalers.FisheryFlag)=28));")
   
   # query to zero out non-retention in PS fisheries
-  sqlQuery(con, as.is = TRUE,
-           paste(sep = '',
-                 "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
-                 "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36));"))
+  qry5 <- paste(sep = '',
+                "UPDATE NonRetention SET NonRetention.CNRInput1 = 0, NonRetention.CNRInput2 = 0, NonRetention.CNRInput3 = 0, NonRetention.CNRInput4 = 0 ",
+                "WHERE (((NonRetention.RunID) In (",runID_string,")) AND ((NonRetention.FisheryID)>=36));")
   
-  close(con)
+  
+  # run queries-------------------------------------------
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    dbGetQuery(chnl, qry1)
+    dbGetQuery(chnl, qry2)
+    dbGetQuery(chnl, qry3)
+    dbGetQuery(chnl, qry4)
+    dbGetQuery(chnl, qry5)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    sqlQuery(con, as.is = TRUE, qry1)
+    sqlQuery(con, as.is = TRUE, qry2)
+    sqlQuery(con, as.is = TRUE, qry3)
+    sqlQuery(con, as.is = TRUE, qry4)
+    sqlQuery(con, as.is = TRUE, qry5)
+    close(con)
+    
+  }
 }
 #----------------------------------------------------------------------------#
 
