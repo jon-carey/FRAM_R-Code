@@ -18,47 +18,51 @@
 #       pulls Escapement table from a specified database, 
 #       option to specify runID, stock, age, timestep
 #
-# 5. pull_FisheryScalers(db_path, runID, fishery, timestep): 
-#       pulls pull_FisheryScalers table from a specified database, 
+# 5. pull_Fishery(db_path, runID, fishery, timestep): 
+#       pulls Fishery table from a specified database, 
 #       option to specify runID, fishery, timestep
 #
-# 6. pull_MaturationRate(db_path, bpID): 
+# 6. pull_FisheryScalers(db_path, runID, fishery, timestep): 
+#       pulls FisheryScalers table from a specified database, 
+#       option to specify runID, fishery, timestep
+#
+# 7. pull_MaturationRate(db_path, bpID): 
 #       pulls MaturationRate table from a specified database, 
 #       option to specify bpID
 #
-# 7. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
+# 8. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
 #       pulls Mortality table from a specified database, 
 #       option to specify runID, stock, age, fishery, timestep
 #
-# 8. pull_RunID(db_path, runID): 
+# 9. pull_RunID(db_path, runID): 
 #       pulls RunID table from a specified database, 
 #       option to specify runID, stock, age, timestep
 #
-# 9. pull_TerminalFisheryFlag(db_path, bpID): 
+# 10. pull_TerminalFisheryFlag(db_path, bpID): 
 #       pulls TerminalFisheryFlag table from a 
 #       specified database, option to specify bpID
 #
-# 10. ZeroPS_SRKW(db_path, runID): 
+# 11. ZeroPS_SRKW(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs (with exception of 
 #       Hood Canal sport & net and 13A net), updates remaining ISBM
 #       fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 11. ZeroPS_SRKW_2021(db_path, runID): 
+# 12. ZeroPS_SRKW_2021(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs for fisheries relevant
 #       to SRKW analyses for PS fisheries, based on 2021 discussions 
 #       with PS comanagers (see 'FRAM Fishery Exclusions_rev9.30.21.xlsx').
 #       updates remaining ISBM fishery flags to scalers. 
 #       Can accomodate multiple runIDs.
 #
-# 12. ZeroPS(db_path, runID): 
+# 13. ZeroPS(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs, updates remaining 
 #       ISBM fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 13. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
+# 14. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
 #       calculates SRFI values for a supplied list of RunIDs; requires a
 #       SRFI_BP_ER to be supplied, will output a csv to outfile.
 #
-# 14. calc_SRFI_BP_ER(db_path):
+# 15. calc_SRFI_BP_ER(db_path):
 #       calculates the SRFI base period ER (1988-1993) for the denominator
 #       in the SRFI calculation. Requires 'db_path' that refers to the
 #       relevant validation database. Returns a single value.
@@ -235,6 +239,22 @@ pull_Escapement <- function(db_path, runID=NULL, stock=NULL, age=NULL, timestep=
   close(con)
   
   return(Escapement[order(Escapement$RunID,Escapement$StockID,Escapement$Age,Escapement$TimeStep), ])
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to pull Fishery table from a FRAM database
+pull_Fishery <- function(db_path, VersionNumber=1) {
+  con = odbcConnectAccess(db_path)
+  
+  FishID = sqlQuery(con, as.is = TRUE,
+                    paste0("SELECT Fishery.* ",
+                           "FROM Fishery ",
+                           "WHERE (((Fishery.VersionNumber) = ",VersionNumber,"));"))
+  
+  close(con)
+  return(FishID[order(FishID$FisheryID), ])
 }
 #----------------------------------------------------------------------------#
 
