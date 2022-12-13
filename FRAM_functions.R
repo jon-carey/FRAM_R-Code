@@ -34,35 +34,39 @@
 #       pulls Mortality table from a specified database, 
 #       option to specify runID, stock, age, fishery, timestep
 #
-# 9. pull_RunID(db_path, runID): 
-#       pulls RunID table from a specified database, 
-#       option to specify runID, stock, age, timestep
+# 9. pull_NaturalMortality(db_path, bpID): 
+#       pulls NaturalMortality table from a specified database, 
+#       option to specify bpID
 #
-# 10. pull_TerminalFisheryFlag(db_path, bpID): 
+# 10. pull_RunID(db_path, runID): 
+#       pulls RunID table from a specified database, 
+#       option to specify runID
+#
+# 11. pull_TerminalFisheryFlag(db_path, bpID): 
 #       pulls TerminalFisheryFlag table from a 
 #       specified database, option to specify bpID
 #
-# 11. ZeroPS_SRKW(db_path, runID): 
+# 12. ZeroPS_SRKW(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs (with exception of 
 #       Hood Canal sport & net and 13A net), updates remaining ISBM
 #       fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 12. ZeroPS_SRKW_2021(db_path, runID): 
+# 13. ZeroPS_SRKW_2021(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs for fisheries relevant
 #       to SRKW analyses for PS fisheries, based on 2021 discussions 
 #       with PS comanagers (see 'FRAM Fishery Exclusions_rev9.30.21.xlsx').
 #       updates remaining ISBM fishery flags to scalers. 
 #       Can accomodate multiple runIDs.
 #
-# 13. ZeroPS(db_path, runID): 
+# 14. ZeroPS(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs, updates remaining 
 #       ISBM fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 14. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
+# 15. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
 #       calculates SRFI values for a supplied list of RunIDs; requires a
 #       SRFI_BP_ER to be supplied, will output a csv to outfile.
 #
-# 15. calc_SRFI_BP_ER(db_path):
+# 16. calc_SRFI_BP_ER(db_path):
 #       calculates the SRFI base period ER (1988-1993) for the denominator
 #       in the SRFI calculation. Requires 'db_path' that refers to the
 #       relevant validation database. Returns a single value.
@@ -518,6 +522,44 @@ pull_Mortality <- function(db_path, runID=NULL, stock=NULL, age=NULL, fishery=NU
   }
   
   return(Mort[order(Mort$RunID,Mort$StockID,Mort$Age,Mort$FisheryID,Mort$TimeStep), ])
+  
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to pull Natural Mortality table from a FRAM database
+pull_NaturalMortality <- function(db_path, bpID) {
+  
+  # set up query
+  if(missing(bpID)) {
+    qry = paste(sep = '',
+                "SELECT * FROM NaturalMortality")
+  } else {
+    bpID_string <- toString(sprintf("%s", bpID))
+    qry = paste(sep = '',
+                "SELECT NaturalMortality.* ",
+                "FROM NaturalMortality ",
+                "WHERE (((NaturalMortality.BasePeriodID) In (",bpID_string,")));")
+  }
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    NatMort = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    NatMort = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
+  return(NatMort[order(NatMort$BasePeriodID,NatMort$Age,NatMort$TimeStep), ])
   
 }
 #----------------------------------------------------------------------------#
