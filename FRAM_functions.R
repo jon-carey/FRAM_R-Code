@@ -18,55 +18,65 @@
 #       pulls Escapement table from a specified database, 
 #       option to specify runID, stock, age, timestep
 #
-# 5. pull_Fishery(db_path, runID, fishery, timestep): 
-#       pulls Fishery table from a specified database, 
-#       option to specify runID, fishery, timestep
+# 5. pull_Fishery(db_path): 
+#       pulls Fishery table from a specified database 
+#       
+# 6. pull_FisheryModelStockProportion(db_path, bpID): 
+#       pulls FisheryModelStockProportion table from a specified database, 
+#       option to specify bpID
 #
-# 6. pull_FisheryScalers(db_path, runID, fishery, timestep): 
+# 7. pull_FisheryScalers(db_path, runID, fishery, timestep): 
 #       pulls FisheryScalers table from a specified database, 
 #       option to specify runID, fishery, timestep
 #
-# 7. pull_MaturationRate(db_path, bpID): 
+# 8. pull_MaturationRate(db_path, bpID): 
 #       pulls MaturationRate table from a specified database, 
 #       option to specify bpID
 #
-# 8. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
+# 9. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
 #       pulls Mortality table from a specified database, 
 #       option to specify runID, stock, age, fishery, timestep
 #
-# 9. pull_NaturalMortality(db_path, bpID): 
+# 10. pull_NaturalMortality(db_path, bpID): 
 #       pulls NaturalMortality table from a specified database, 
 #       option to specify bpID
 #
-# 10. pull_RunID(db_path, runID): 
+# 11. pull_RunID(db_path, runID): 
 #       pulls RunID table from a specified database, 
 #       option to specify runID
 #
-# 11. pull_TerminalFisheryFlag(db_path, bpID): 
+# 12. pull_ShakerMortRate(db_path, bpID): 
+#       pulls ShakerMortRate table from a specified database, 
+#       option to specify bpID
+#
+# 13. pull_Stock(db_path): 
+#       pulls Stock table from a specified database
+#
+# 14. pull_TerminalFisheryFlag(db_path, bpID): 
 #       pulls TerminalFisheryFlag table from a 
 #       specified database, option to specify bpID
 #
-# 12. ZeroPS_SRKW(db_path, runID): 
+# 15. ZeroPS_SRKW(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs (with exception of 
 #       Hood Canal sport & net and 13A net), updates remaining ISBM
 #       fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 13. ZeroPS_SRKW_2021(db_path, runID): 
+# 16. ZeroPS_SRKW_2021(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs for fisheries relevant
 #       to SRKW analyses for PS fisheries, based on 2021 discussions 
 #       with PS comanagers (see 'FRAM Fishery Exclusions_rev9.30.21.xlsx').
 #       updates remaining ISBM fishery flags to scalers. 
 #       Can accomodate multiple runIDs.
 #
-# 14. ZeroPS(db_path, runID): 
+# 17. ZeroPS(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs, updates remaining 
 #       ISBM fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 15. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
+# 18. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
 #       calculates SRFI values for a supplied list of RunIDs; requires a
 #       SRFI_BP_ER to be supplied, will output a csv to outfile.
 #
-# 16. calc_SRFI_BP_ER(db_path):
+# 19. calc_SRFI_BP_ER(db_path):
 #       calculates the SRFI base period ER (1988-1993) for the denominator
 #       in the SRFI calculation. Requires 'db_path' that refers to the
 #       relevant validation database. Returns a single value.
@@ -76,7 +86,7 @@
 # required packages
 library(RODBC)
 library(odbc)
-library(doBy)
+# library(doBy)
 
 #----------------------------------------------------------------------------#
 # Function to pull AEQ table from a FRAM database
@@ -332,6 +342,44 @@ pull_Fishery <- function(db_path, VersionNumber=1) {
   }
   
   return(FishID[order(FishID$FisheryID), ])
+  
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to pull pull_FisheryModelStockProportion table from a FRAM database
+pull_FisheryModelStockProportion <- function(db_path, bpID) {
+  
+  # set up query
+  if(missing(bpID)) {
+    qry = paste(sep = '',
+                "SELECT * FROM FisheryModelStockProportion")
+  } else {
+    bpID_string <- toString(sprintf("%s", bpID))
+    qry = paste(sep = '',
+                "SELECT FisheryModelStockProportion.* ",
+                "FROM FisheryModelStockProportion ",
+                "WHERE (((FisheryModelStockProportion.BasePeriodID) In (",bpID_string,")));")
+  }
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    MSP = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    MSP = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
+  return(MSP[order(MSP$BasePeriodID,MSP$FisheryID), ])
   
 }
 #----------------------------------------------------------------------------#
@@ -598,6 +646,75 @@ pull_RunID <- function(db_path, runID) {
   }
   
   return(RunID[order(RunID$RunID), ])
+  
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to pull ShakerMortRate table from a FRAM database
+pull_ShakerMortRate <- function(db_path, bpID) {
+  
+  # set up query
+  if(missing(bpID)) {
+    qry = paste(sep = '',
+                "SELECT * FROM ShakerMortRate")
+  } else {
+    bpID_string <- toString(sprintf("%s", bpID))
+    qry = paste(sep = '',
+                "SELECT ShakerMortRate* ",
+                "FROM ShakerMortRate ",
+                "WHERE (((ShakerMortRate.BasePeriodID) In (",bpID_string,")));")
+  }
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    ShakerMort = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    ShakerMort = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
+  return(ShakerMort[order(ShakerMort$BasePeriodID,ShakerMort$FisheryID,ShakerMort$TimeStep), ])
+  
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to pull Stock table from a FRAM database
+pull_Stock <- function(db_path, StockVersion=5) {
+  
+  # set up query
+  qry <- paste0("SELECT Stock.* ",
+                "FROM Stock ",
+                "WHERE (((Stock.StockVersion) = ",StockVersion,"));")
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    StkID = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    StkID = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
+  return(StkID[order(StkID$StockID), ])
   
 }
 #----------------------------------------------------------------------------#
