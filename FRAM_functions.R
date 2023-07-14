@@ -10,73 +10,77 @@
 #       pulls BackwardsFRAM table from a specified database, 
 #       option to specify runID
 #
-# 3. pull_Cohort(db_path, runID, stock, age, timestep): 
+# 3. pull_BaseExploitationRate(db_path, bpID, stock, age, fishery, timestep): 
+#       pulls aseExploitationRate table from a specified database, 
+#       option to specify bpID, stock, age, fishery, timestep
+#
+# 4. pull_Cohort(db_path, runID, stock, age, timestep): 
 #       pulls Cohort table from a specified database, 
 #       option to specify runID, stock, age, timestep
 #
-# 4. pull_Escapement(db_path, runID, stock, age, timestep): 
+# 5. pull_Escapement(db_path, runID, stock, age, timestep): 
 #       pulls Escapement table from a specified database, 
 #       option to specify runID, stock, age, timestep
 #
-# 5. pull_Fishery(db_path): 
+# 6. pull_Fishery(db_path): 
 #       pulls Fishery table from a specified database 
 #       
-# 6. pull_FisheryModelStockProportion(db_path, bpID): 
+# 7. pull_FisheryModelStockProportion(db_path, bpID): 
 #       pulls FisheryModelStockProportion table from a specified database, 
 #       option to specify bpID
 #
-# 7. pull_FisheryScalers(db_path, runID, fishery, timestep): 
+# 8. pull_FisheryScalers(db_path, runID, fishery, timestep): 
 #       pulls FisheryScalers table from a specified database, 
 #       option to specify runID, fishery, timestep
 #
-# 8. pull_MaturationRate(db_path, bpID): 
+# 9. pull_MaturationRate(db_path, bpID): 
 #       pulls MaturationRate table from a specified database, 
 #       option to specify bpID
 #
-# 9. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
+# 10. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
 #       pulls Mortality table from a specified database, 
 #       option to specify runID, stock, age, fishery, timestep
 #
-# 10. pull_NaturalMortality(db_path, bpID): 
+# 11. pull_NaturalMortality(db_path, bpID): 
 #       pulls NaturalMortality table from a specified database, 
 #       option to specify bpID
 #
-# 11. pull_RunID(db_path, runID): 
+# 12. pull_RunID(db_path, runID): 
 #       pulls RunID table from a specified database, 
 #       option to specify runID
 #
-# 12. pull_ShakerMortRate(db_path, bpID): 
+# 13. pull_ShakerMortRate(db_path, bpID): 
 #       pulls ShakerMortRate table from a specified database, 
 #       option to specify bpID
 #
-# 13. pull_Stock(db_path): 
+# 14. pull_Stock(db_path): 
 #       pulls Stock table from a specified database
 #
-# 14. pull_TerminalFisheryFlag(db_path, bpID): 
+# 15. pull_TerminalFisheryFlag(db_path, bpID): 
 #       pulls TerminalFisheryFlag table from a 
 #       specified database, option to specify bpID
 #
-# 15. ZeroPS_SRKW(db_path, runID): 
+# 16. ZeroPS_SRKW(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs (with exception of 
 #       Hood Canal sport & net and 13A net), updates remaining ISBM
 #       fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 16. ZeroPS_SRKW_2021(db_path, runID): 
+# 17. ZeroPS_SRKW_2021(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs for fisheries relevant
 #       to SRKW analyses for PS fisheries, based on 2021 discussions 
 #       with PS comanagers (see 'FRAM Fishery Exclusions_rev9.30.21.xlsx').
 #       updates remaining ISBM fishery flags to scalers. 
 #       Can accomodate multiple runIDs.
 #
-# 17. ZeroPS(db_path, runID): 
+# 18. ZeroPS(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs, updates remaining 
 #       ISBM fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 18. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
+# 19. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
 #       calculates SRFI values for a supplied list of RunIDs; requires a
 #       SRFI_BP_ER to be supplied, will output a csv to outfile.
 #
-# 19. calc_SRFI_BP_ER(db_path):
+# 20. calc_SRFI_BP_ER(db_path):
 #       calculates the SRFI base period ER (1988-1993) for the denominator
 #       in the SRFI calculation. Requires 'db_path' that refers to the
 #       relevant validation database. Returns a single value.
@@ -159,6 +163,89 @@ pull_BackwardsFRAM <- function(db_path, runID) {
   }
   
   return(bkFRAM[order(bkFRAM$RunID), ])
+  
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to pull BaseExploitationRate table from a FRAM database
+pull_BaseExploitationRate <- function(db_path, bpID=NULL, stock=NULL, age=NULL, fishery=NULL, timestep=NULL) {
+  
+  # determine which arguments are provided
+  x <- list()
+  if(is.null(bpID) == FALSE) {
+    x[["BasePeriodID"]] <- bpID
+  }
+  if(is.null(stock) == FALSE) {
+    x[["StockID"]] <- stock
+  }
+  if(is.null(age) == FALSE) {
+    x[["Age"]] <- age
+  }
+  if(is.null(fishery) == FALSE) {
+    x[["FisheryID"]] <- fishery
+  }
+  if(is.null(timestep) == FALSE) {
+    x[["TimeStep"]] <- timestep
+  }
+  
+  # set up query
+  if(length(x) == 0) {
+    qry <- paste(sep = '',
+                 "SELECT * FROM BaseExploitationRate")
+  }
+  
+  if(length(x) == 1) {
+    x1_string <- toString(sprintf("%s", x[[1]]))
+    qry = paste(sep = '',
+                "SELECT BaseExploitationRate.* ",
+                "FROM BaseExploitationRate ",
+                "WHERE (((BaseExploitationRate.",names(x[1]),") In (",x1_string,")));")
+  }
+  
+  if(length(x) > 1) {
+    x1_string <- toString(sprintf("%s", x[[1]]))
+    where_clause <- paste("WHERE (((BaseExploitationRate.",names(x[1]),") In (",x1_string,"))",sep = "")
+    
+    for(i in 2:length(x)) {
+      xi_string <- toString(sprintf("%s", x[[i]]))
+      if(i == 2) {
+        and_clause <- paste(" AND ((BaseExploitationRate.",names(x[i]),") In (",xi_string,"))",sep = "")
+      }
+      if(i > 2) {
+        and_clause <- paste(and_clause," AND ((BaseExploitationRate.",names(x[i]),") In (",xi_string,"))",sep = "")
+      }
+    }
+    
+    qry = paste(sep = '',
+                "SELECT BaseExploitationRate.* ",
+                "FROM BaseExploitationRate ",
+                where_clause,
+                and_clause,");")
+  }
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    BaseExploitationRate = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    BaseExploitationRate = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
+  return(BaseExploitationRate[order(BaseExploitationRate$BasePeriodID,
+                                    BaseExploitationRate$StockID,
+                                    BaseExploitationRate$Age,
+                                    BaseExploitationRate$FisheryID,
+                                    BaseExploitationRate$TimeStep), ])
   
 }
 #----------------------------------------------------------------------------#
