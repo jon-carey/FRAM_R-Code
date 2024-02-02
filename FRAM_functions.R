@@ -45,45 +45,53 @@
 #       pulls NaturalMortality table from a specified database, 
 #       option to specify bpID
 #
-# 12. pull_RunID(db_path, runID): 
+# 12. pull_NonRetention(db_path, runID, fishery, timestep): 
+#       pulls pull_NonRetention table from a specified database, 
+#       option to specify runID, fishery, timestep
+#
+# 13. pull_RunID(db_path, runID): 
 #       pulls RunID table from a specified database, 
 #       option to specify runID
 #
-# 13. pull_ShakerMortRate(db_path, bpID): 
+# 14. pull_ShakerMortRate(db_path, bpID): 
 #       pulls ShakerMortRate table from a specified database, 
 #       option to specify bpID
 #
-# 14. pull_Stock(db_path): 
+# 15. pull_Stock(db_path): 
 #       pulls Stock table from a specified database
 #
-# 15. pull_TerminalFisheryFlag(db_path, bpID): 
+# 16. pull_TerminalFisheryFlag(db_path, bpID): 
 #       pulls TerminalFisheryFlag table from a 
 #       specified database, option to specify bpID
 #
-# 16. ZeroPS_SRKW(db_path, runID): 
+# 17. ZeroPS_SRKW(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs (with exception of 
 #       Hood Canal sport & net and 13A net), updates remaining ISBM
 #       fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 17. ZeroPS_SRKW_2021(db_path, runID): 
+# 18. ZeroPS_SRKW_2021(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs for fisheries relevant
 #       to SRKW analyses for PS fisheries, based on 2021 discussions 
 #       with PS comanagers (see 'FRAM Fishery Exclusions_rev9.30.21.xlsx').
 #       updates remaining ISBM fishery flags to scalers. 
 #       Can accomodate multiple runIDs.
 #
-# 18. ZeroPS(db_path, runID): 
+# 19. ZeroPS(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs, updates remaining 
 #       ISBM fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 19. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
+# 20. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
 #       calculates SRFI values for a supplied list of RunIDs; requires a
 #       SRFI_BP_ER to be supplied, will output a csv to outfile.
 #
-# 20. calc_SRFI_BP_ER(db_path):
+# 21. calc_SRFI_BP_ER(db_path):
 #       calculates the SRFI base period ER (1988-1993) for the denominator
 #       in the SRFI calculation. Requires 'db_path' that refers to the
 #       relevant validation database. Returns a single value.
+#
+# 22. OPI_bkFRAM_summary (db_path, stk_lut_path, runID, out_path):
+#       summarizes OPI stock catches and abundances in a format so they 
+#       can be easily added to the "OPI_postseason_abundances.xlsx" file
 #
 ##############################################################################
 
@@ -701,6 +709,79 @@ pull_NaturalMortality <- function(db_path, bpID) {
 
 
 #----------------------------------------------------------------------------#
+# Function to pull NonRetention table from a FRAM database
+pull_NonRetention <- function(db_path, runID=NULL, fishery=NULL, timestep=NULL) {
+  
+  # determine which arguments are provided
+  x <- list()
+  if(is.null(runID) == FALSE) {
+    x[["RunID"]] <- runID
+  }
+  if(is.null(fishery) == FALSE) {
+    x[["FisheryID"]] <- fishery
+  }
+  if(is.null(timestep) == FALSE) {
+    x[["TimeStep"]] <- timestep
+  }
+  
+  # set up query
+  if(length(x) == 0) {
+    qry <- paste(sep = '',
+                 "SELECT * FROM NonRetention")
+  }
+  
+  if(length(x) == 1) {
+    x1_string <- toString(sprintf("%s", x[[1]]))
+    qry = paste(sep = '',
+                "SELECT NonRetention.* ",
+                "FROM NonRetention ",
+                "WHERE (((NonRetention.",names(x[1]),") In (",x1_string,")));")
+  }
+  
+  if(length(x) > 1) {
+    x1_string <- toString(sprintf("%s", x[[1]]))
+    where_clause <- paste("WHERE (((NonRetention.",names(x[1]),") In (",x1_string,"))",sep = "")
+    
+    for(i in 2:length(x)) {
+      xi_string <- toString(sprintf("%s", x[[i]]))
+      if(i == 2) {
+        and_clause <- paste(" AND ((NonRetention.",names(x[i]),") In (",xi_string,"))",sep = "")
+      }
+      if(i > 2) {
+        and_clause <- paste(and_clause," AND ((NonRetention.",names(x[i]),") In (",xi_string,"))",sep = "")
+      }
+    }
+    
+    qry = paste(sep = '',
+                "SELECT NonRetention.* ",
+                "FROM NonRetention ",
+                where_clause,
+                and_clause,");")
+  }
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    NonRetention = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    NonRetention = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
+  return(NonRetention[order(NonRetention$RunID,NonRetention$FisheryID,NonRetention$TimeStep), ])
+  
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
 # Function to pull RunID table from a FRAM database
 pull_RunID <- function(db_path, runID) {
   
@@ -1161,6 +1242,59 @@ calc_SRFI_BP_ER <- function(db_path) {
   }
   
   return(mean(as.numeric(SRFI_log$SRFI_ER)))
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to summarize OPI stock postseason catches & escapements for 
+# adding to the 'OPI_postseason_abundances.xlsx' file
+
+# Requires: 
+#  - db_path (path to the OPITT bkFRAM database)
+#  - stk_lut_path (path to the stk_lut.csv file that maps stocks to aggregates)
+#  - runID (the RunID for the model run to be summarized)
+#  - out_path (path to the folder where the output file will be saved)
+
+OPI_bkFRAM_summary <- function(db_path, stk_lut_path, runID, out_path) {
+  stk_lut <- read.csv(stk_lut_path)
+  
+  stk_lut$OPI_Stock <- factor(stk_lut$OPI_Stock, levels = unique(stk_lut$OPI_Stock))
+  
+  year <- as.data.frame(pull_RunID(db_path, runID)) %>% 
+    pull(RunYear)
+  
+  esc <- pull_Escapement(db_path, runID, stock = c(165:200)) %>% 
+    left_join(., stk_lut) %>% 
+    group_by(OPI_Stock) %>% 
+    summarise(Escapement = sum(Escapement))
+  
+  mort <- pull_Mortality(db_path, runID, stock = c(165:200)) %>% 
+    left_join(., stk_lut) %>% 
+    rowwise() %>% 
+    mutate(tot_mort = sum(LandedCatch, NonRetention, Shaker, DropOff,
+                          MSFLandedCatch, MSFNonRetention, MSFShaker, MSFDropOff)) %>% 
+    mutate(Fishery = if_else(FisheryID %in% c(167:198), "AK_BC", "NA")) %>% 
+    mutate(Fishery = if_else(FisheryID %in% c(33:166), "NOF", Fishery),
+           Fishery = if_else(FisheryID %in% c(1:8, 15:22), "SOF", Fishery),
+           Fishery = if_else(FisheryID %in% c(9:14, 23:32), "River", Fishery)) %>% 
+    group_by(OPI_Stock, Fishery) %>% 
+    summarise(TotalMort = sum(tot_mort)) %>% 
+    pivot_wider(id_cols = 1, names_from = Fishery, values_from = TotalMort) %>% 
+    relocate(River, .after = SOF)
+  
+  abundance <- mort %>% 
+    left_join(., esc) %>% 
+    mutate(Total = sum(AK_BC, NOF, SOF, River, Escapement)) %>% 
+    mutate(Year = year, .before = OPI_Stock) %>% 
+    left_join(., stk_lut %>% select(OPI_Stock, Stock) %>% distinct(.)) %>% 
+    relocate(Stock, .before = OPI_Stock) 
+  
+  abundance <- as.data.frame(abundance) %>% 
+    select(-OPI_Stock) %>% 
+    arrange(Stock)
+  
+  write.csv(abundance, paste0(out_path, "OPI_bkFRAM_summary_", year, ".csv"))
 }
 #----------------------------------------------------------------------------#
 
