@@ -29,67 +29,71 @@
 #       pulls FisheryModelStockProportion table from a specified database, 
 #       option to specify bpID
 #
-# 8. pull_FisheryScalers(db_path, runID, fishery, timestep): 
+# 8. pull_FisheryMortality(db_path, runID, fishery, timestep): 
+#       pulls FisheryMortality table from a specified database, 
+#       option to specify runID, fishery, timestep
+#
+# 9. pull_FisheryScalers(db_path, runID, fishery, timestep): 
 #       pulls FisheryScalers table from a specified database, 
 #       option to specify runID, fishery, timestep
 #
-# 9. pull_MaturationRate(db_path, bpID): 
+# 10. pull_MaturationRate(db_path, bpID): 
 #       pulls MaturationRate table from a specified database, 
 #       option to specify bpID
 #
-# 10. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
+# 11. pull_Mortality(db_path, runID, stock, age, fishery, timestep): 
 #       pulls Mortality table from a specified database, 
 #       option to specify runID, stock, age, fishery, timestep
 #
-# 11. pull_NaturalMortality(db_path, bpID): 
+# 12. pull_NaturalMortality(db_path, bpID): 
 #       pulls NaturalMortality table from a specified database, 
 #       option to specify bpID
 #
-# 12. pull_NonRetention(db_path, runID, fishery, timestep): 
+# 13. pull_NonRetention(db_path, runID, fishery, timestep): 
 #       pulls pull_NonRetention table from a specified database, 
 #       option to specify runID, fishery, timestep
 #
-# 13. pull_RunID(db_path, runID): 
+# 14. pull_RunID(db_path, runID): 
 #       pulls RunID table from a specified database, 
 #       option to specify runID
 #
-# 14. pull_ShakerMortRate(db_path, bpID): 
+# 15. pull_ShakerMortRate(db_path, bpID): 
 #       pulls ShakerMortRate table from a specified database, 
 #       option to specify bpID
 #
-# 15. pull_Stock(db_path): 
+# 16. pull_Stock(db_path): 
 #       pulls Stock table from a specified database
 #
-# 16. pull_TerminalFisheryFlag(db_path, bpID): 
+# 17. pull_TerminalFisheryFlag(db_path, bpID): 
 #       pulls TerminalFisheryFlag table from a 
 #       specified database, option to specify bpID
 #
-# 17. ZeroPS_SRKW(db_path, runID): 
+# 18. ZeroPS_SRKW(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs (with exception of 
 #       Hood Canal sport & net and 13A net), updates remaining ISBM
 #       fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 18. ZeroPS_SRKW_2021(db_path, runID): 
+# 19. ZeroPS_SRKW_2021(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs for fisheries relevant
 #       to SRKW analyses for PS fisheries, based on 2021 discussions 
 #       with PS comanagers (see 'FRAM Fishery Exclusions_rev9.30.21.xlsx').
 #       updates remaining ISBM fishery flags to scalers. 
 #       Can accomodate multiple runIDs.
 #
-# 19. ZeroPS(db_path, runID): 
+# 20. ZeroPS(db_path, runID): 
 #       zeros out all PS fishery and CNR inputs, updates remaining 
 #       ISBM fishery flags to scalers. Can accomodate multiple runIDs.
 #
-# 20. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
+# 21. calc_SRFI(db_path, runID, SRFI_BP_ER, outfile): 
 #       calculates SRFI values for a supplied list of RunIDs; requires a
 #       SRFI_BP_ER to be supplied, will output a csv to outfile.
 #
-# 21. calc_SRFI_BP_ER(db_path):
+# 22. calc_SRFI_BP_ER(db_path):
 #       calculates the SRFI base period ER (1988-1993) for the denominator
 #       in the SRFI calculation. Requires 'db_path' that refers to the
 #       relevant validation database. Returns a single value.
 #
-# 22. OPI_bkFRAM_summary (db_path, stk_lut_path, runID, out_path):
+# 23. OPI_bkFRAM_summary (db_path, stk_lut_path, runID, out_path):
 #       summarizes OPI stock catches and abundances in a format so they 
 #       can be easily added to the "OPI_postseason_abundances.xlsx" file
 #
@@ -475,6 +479,79 @@ pull_FisheryModelStockProportion <- function(db_path, bpID) {
   }
   
   return(MSP[order(MSP$BasePeriodID,MSP$FisheryID), ])
+  
+}
+#----------------------------------------------------------------------------#
+
+
+#----------------------------------------------------------------------------#
+# Function to pull FisheryMortality table from a FRAM database
+pull_FisheryMortality <- function(db_path, runID=NULL, fishery=NULL, timestep=NULL) {
+  
+  # determine which arguments are provided
+  x <- list()
+  if(is.null(runID) == FALSE) {
+    x[["RunID"]] <- runID
+  }
+  if(is.null(fishery) == FALSE) {
+    x[["FisheryID"]] <- fishery
+  }
+  if(is.null(timestep) == FALSE) {
+    x[["TimeStep"]] <- timestep
+  }
+  
+  # set up query
+  if(length(x) == 0) {
+    qry <- paste(sep = '',
+                 "SELECT * FROM FisheryMortality")
+  }
+  
+  if(length(x) == 1) {
+    x1_string <- toString(sprintf("%s", x[[1]]))
+    qry = paste(sep = '',
+                "SELECT FisheryMortality* ",
+                "FROM FisheryMortality ",
+                "WHERE (((FisheryMortality",names(x[1]),") In (",x1_string,")));")
+  }
+  
+  if(length(x) > 1) {
+    x1_string <- toString(sprintf("%s", x[[1]]))
+    where_clause <- paste("WHERE (((FisheryMortality",names(x[1]),") In (",x1_string,"))",sep = "")
+    
+    for(i in 2:length(x)) {
+      xi_string <- toString(sprintf("%s", x[[i]]))
+      if(i == 2) {
+        and_clause <- paste(" AND ((FisheryMortality",names(x[i]),") In (",xi_string,"))",sep = "")
+      }
+      if(i > 2) {
+        and_clause <- paste(and_clause," AND ((FisheryMortality",names(x[i]),") In (",xi_string,"))",sep = "")
+      }
+    }
+    
+    qry = paste(sep = '',
+                "SELECT FisheryMortality* ",
+                "FROM FisheryMortality ",
+                where_clause,
+                and_clause,");")
+  }
+  
+  # run query
+  if(version$arch == "x86_64") { # if running 64-bit R, use odbc package
+    
+    driverName = paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};", "DBQ=", db_path)
+    chnl = dbConnect(odbc(), .connection_string = driverName)
+    FishMort = dbGetQuery(chnl, qry)
+    dbDisconnect(chnl)
+    
+  } else if(version$arch == "i386") { # if using 32-bit R, use RODBC package
+    
+    con = odbcConnectAccess(db_path)
+    FishMort = sqlQuery(con, as.is = TRUE, qry)
+    close(con)
+    
+  }
+  
+  return(FishMort[order(FishMort$RunID,FishMort$FisheryID,FishMort$TimeStep), ])
   
 }
 #----------------------------------------------------------------------------#
