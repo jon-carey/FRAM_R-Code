@@ -1248,7 +1248,7 @@ SRKW_SummarizR <- function(Years,
       pre_mod_ts1 <- cbind(pre_mod[,1],pre_mod[,1],pre_mod[,1])
       
       post_base <- dat %>% 
-        filter(RunType == "Scenario_RMP") %>% 
+        filter(RunType == base) %>% 
         select(RunYear, TimeStep, paste0("postFish.",regions[i])) %>% 
         rename(postFish = paste0("postFish.",regions[i])) %>% 
         group_by(RunYear, TimeStep) %>% 
