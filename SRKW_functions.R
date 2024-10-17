@@ -1312,7 +1312,7 @@ SRKW_SummarizR <- function(Years,
 #--------------------------------------------------------------------------------------------------------#
 
 SRKW_extract <- function(SRKW_out, 
-                         scenarios = c("ZeroALL", "ZeroBC", "ZeroPFMC", "ZeroPS", "ZeroSEAK", "ZeroUS"), 
+                         scenarios, 
                          regions = c("Salish", "NOF", "OR", "Cali", "SWWCVI"),
                          summaries = c("preFish_base", "preFish_mod", "postFish_base", 
                                        "postFish_mod", "difference_nominal", "difference_percent")) {
@@ -1410,7 +1410,7 @@ SRKW_extract <- function(SRKW_out,
 
 SRKW_BoxPlots <- function(SRKW_out, 
                           metric = "difference_percent", 
-                          scenarios = c("ZeroALL", "ZeroBC", "ZeroPFMC", "ZeroPS", "ZeroSEAK", "ZeroUS"), 
+                          scenarios, 
                           regions = c("Salish", "NOF", "OR", "Cali", "SWWCVI"),
                           by_scenario = TRUE,
                           by_region = TRUE, 
@@ -1424,10 +1424,10 @@ SRKW_BoxPlots <- function(SRKW_out,
     stop(paste0("Invalid metric. Please provide a valid metric from: ", paste(metric_options, collapse = ", "), "."))
   }
   
-  dat <- SRKW_extract(summaries = metric, SRKW_out = SRKW_out) %>% 
+  dat <- SRKW_extract(scenarios = scenarios, summaries = metric, SRKW_out = SRKW_out) %>% 
     pivot_longer(cols = 5:9, names_to = "Region", values_to = "value") %>% 
     mutate(value = formattable::percent(value, digits = 2)) %>% 
-    mutate(Scenario = factor(Scenario, levels = c("ZeroSEAK", "ZeroPFMC", "ZeroPS", "ZeroUS", "ZeroBC", "ZeroALL"))) %>% 
+    mutate(Scenario = factor(Scenario, levels = scenarios)) %>% 
     mutate(Region = factor(Region, levels = c("SWWCVI", "Salish", "NOF", "OR", "Cali"))) %>% 
     mutate(TimeStep = factor(TimeStep, levels = c("Oct_Apr", "May_Jun", "Jul_Sep")))
   
